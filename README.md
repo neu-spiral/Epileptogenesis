@@ -1,5 +1,6 @@
 # Epileptogenesis
 Clone this repo, and put the _\_data_ folder (contact repo owners for access) in the root directory, for all codes to work.
+Find the necessary library versions to install in _requirements.in_.
 
 # Next Actions
 ## Potential Pipeline improvements
