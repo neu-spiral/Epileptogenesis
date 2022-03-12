@@ -1,4 +1,5 @@
 # Epileptogenesis
+Clone this repo, and put the \_data folder (contact repo owners for access) in the root directory, for all codes to work.
 
 # Next Actions
 Simple Naive Bayes:
