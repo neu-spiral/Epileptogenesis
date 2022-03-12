@@ -1,4 +1,4 @@
-# Epileptogenesis
+# Repo Usage
 Clone this repo, and copy the _\_data_ folder from [here](https://www.dropbox.com/sh/icfard16qqjpqrm/AAA3oMcZpGe1C0HZfqpflVIOa?dl=0) to the root directory, for all codes to work.
 Find the necessary library versions to install in _requirements.in_.
 
