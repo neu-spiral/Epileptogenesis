@@ -8,7 +8,7 @@ _data
 _stat
 _plot
 cluster
-metric
+metrics
 notebooks
 *.ipynb
 .DS_Store

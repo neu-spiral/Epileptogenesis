@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt 
 from matplotlib.pyplot import imshow
 from matplotlib.lines import Line2D
+import argparse
 
 from sklearn import decomposition, linear_model,metrics
 from sklearn.base import BaseEstimator,ClassifierMixin
@@ -280,13 +281,15 @@ def impute_data(imputer,train_df,test_df,fmri_key,neighbors=3):
         imputer_mode=IterativeImputer(random_state=seed_value)
 
     # Select appropriate columns for chosen fmri strength
-    x_fmri=train_df[:,(fmri_key-1)*166:fmri_key*166]
+    # fmri_label=col_0, dmri_label=col_562, common_label=col_563, eeg_label=col_567
+
+    x_fmri=train_df[:,1+((fmri_key-1)*166):1+(fmri_key*166)]
     x_dmri=train_df[:,499:562]
     x_eeg=train_df[:,564:567]
     train_df_f=np.append(x_fmri,x_dmri,axis=1)
     train_df_f=np.append(train_df_f,x_eeg,axis=1)
 
-    x_fmri=test_df[:,(fmri_key-1)*166:fmri_key*166]
+    x_fmri=test_df[:,1+((fmri_key-1)*166):1+(fmri_key*166)]
     x_dmri=test_df[:,499:562]
     x_eeg=test_df[:,564:567]
     test_df_f=np.append(x_fmri,x_dmri,axis=1)
