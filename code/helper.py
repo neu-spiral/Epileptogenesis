@@ -1,0 +1,189 @@
+#%%
+import numpy as np
+# %matplotlib inline
+import matplotlib.pyplot as plt 
+from matplotlib.pyplot import imshow
+from matplotlib.lines import Line2D
+
+from sklearn import decomposition, linear_model,metrics
+from sklearn.base import BaseEstimator,ClassifierMixin
+from sklearn.decomposition import KernelPCA
+from sklearn.svm import SVC
+from sklearn.preprocessing import StandardScaler, LabelEncoder,FunctionTransformer
+class_labels = LabelEncoder()
+from sklearn.model_selection import cross_val_score,GridSearchCV,StratifiedKFold,KFold,train_test_split,LeaveOneOut
+from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.metrics import classification_report, confusion_matrix,mean_squared_error,r2_score
+from sklearn.metrics import auc, RocCurveDisplay, roc_curve, f1_score
+from sklearn.ensemble import RandomForestClassifier,AdaBoostClassifier,VotingClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.feature_selection import RFE, SelectKBest, f_classif, chi2, mutual_info_classif
+from sklearn.manifold import TSNE
+from sklearn.naive_bayes import GaussianNB
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+from sklearn.impute import SimpleImputer,KNNImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.cross_decomposition import CCA
+from sklearn.feature_selection import SequentialFeatureSelector
+from sklearn.cluster import KMeans
+from sklearn.metrics.pairwise import pairwise_distances_argmin
+from astropy.stats import jackknife_resampling, jackknife_stats, binom_conf_interval
+from tqdm import tqdm
+
+## Additional imports from DWI code
+import math
+from itertools import product
+from contextlib import redirect_stdout
+import pandas as pd
+import time
+import scipy
+from scipy import io, stats
+from statistics import mean
+#from astropy.stats import jackknife_resampling, jackknife_stats, binom_conf_interval
+from MMIDimReduction import MMINet
+from cluster.selfrepresentation import ElasticNetSubspaceClustering, SparseSubspaceClusteringOMP
+
+seed_value= 42
+import os
+os.environ['PYTHONHASHSEED']=str(seed_value)
+import random
+random.seed(seed_value)
+np.random.seed(seed_value)
+
+
+#%%
+def remove_non_features(column_list):
+    '''Removes column names that aren't features from column list'''
+    for to_remove in ["ID","Late Seizure Label","Subject","Subject Number"]:
+        if to_remove in column_list:
+            column_list.remove(to_remove)
+    return column_list
+
+def modality_svm(selecter,imputer,x_df,y):
+    ''' Fits and scores a kPCA+SVM classifier for each modality, based on an imputer'''
+
+    svm_classifier = Pipeline([("pca",KernelPCA()), ("svm",SVC(probability=True))])
+    param_grid_svm={"clf__pca__n_components":[2,3,4,5,None],"clf__pca__gamma":[.01,.05,.1],"clf__pca__kernel":["linear","rbf"],
+    "clf__svm__C": [1, 10, 100], "clf__svm__gamma": [.01, .1]}
+    
+    pipe=Pipeline([("select",selecter),("scale",StandardScaler()), ("impute",imputer),("clf",svm_classifier)])
+
+    search=GridSearchCV(estimator=pipe,scoring=score_string,param_grid=param_grid_svm,cv=cv_inner,refit=True).fit(x_df,y)
+
+    scores= cross_val_score(search, x_df, y, scoring=score_string, cv=cv_outer, n_jobs=-1)
+
+    return search,scores
+
+def modality_tree(selecter,imputer,x_df,y):
+    ''' Fits and scores a tree-based classifier for each modality, based on an imputer'''
+
+    tree_classifier= Pipeline([("kbest",SelectKBest(chi2)), ("tree",AdaBoostClassifier())])
+    param_grid_tree={"clf__kbest__k":[2,3,5,7,"all"],"clf__tree__n_estimators":[10,50,100]}
+    
+    pipe=Pipeline([("select",selecter), ("impute",imputer),("clf",tree_classifier)])
+
+    search=GridSearchCV(estimator=pipe,scoring=score_string,param_grid=param_grid_tree,cv=cv_inner,refit=True).fit(x_df,y)
+
+    scores= cross_val_score(search, x_df, y, scoring=score_string, cv=cv_outer, n_jobs=-1)
+
+    return search,scores
+
+def drop_nan_index(X,y,idx):
+    ''' Selects a subset based on idx and then returns the subset of X,y that correspond to rows without any nans. 
+    For use in test train split for individual modality classifiers'''
+
+    X_sub=X[idx,:]
+    y_sub=y[idx]
+    drop_rows=~np.isnan(X_sub).any(axis=1)
+    X_sub=X_sub[drop_rows]
+    y_sub=y_sub[drop_rows]
+
+    return X_sub,y_sub
+
+def nb_svm(x,y):
+    ''' Fits and scores a kPCA+SVM classifier for use in a naive bayes classifier'''
+
+    svm_classifier = Pipeline([("pca",KernelPCA()), ("svm",SVC(probability=True))])
+    param_grid_svm={"clf__pca__n_components":[2,3,4,5,None],"clf__pca__gamma":[.01,.05,.1],"clf__pca__kernel":["linear","rbf"],
+    "clf__svm__C": [1, 10, 100], "clf__svm__gamma": [.01, .1]}
+    
+    pipe=Pipeline([("scale",StandardScaler()),("clf",svm_classifier)])
+
+    search=GridSearchCV(estimator=pipe,scoring=score_string,param_grid=param_grid_svm,cv=cv_inner,refit=True).fit(x,y)
+
+    return search
+
+def nb_tree(x,y):
+    ''' Fits and scores a tree-based classifier for use in a naive bayes classifier'''
+
+    tree_classifier= Pipeline([("kbest",SelectKBest(chi2)), ("tree",AdaBoostClassifier())])
+    param_grid_tree={"clf__kbest__k":[2,3,5,7,10,15],"clf__tree__n_estimators":[10,50,100]}
+    
+    pipe=Pipeline([("scale",StandardScaler()),("clf",tree_classifier)])
+
+    search=GridSearchCV(estimator=pipe,scoring=score_string,param_grid=param_grid_tree,cv=cv_inner,refit=True).fit(x,y)
+
+    # scores= cross_val_score(search, x_df, y, scoring=score_string, cv=cv_outer, n_jobs=-1)
+
+    return search
+
+def naive_bayes_multimodal(fmri_class,X_fmri,dwi_class,X_dwi,y_test,eeg_class=np.nan,X_eeg=np.nan):
+    '''Makes a prediction based on a naive bayes multimodal fusion using a conditional independence assumption, which ignores modalities that don't have features for a given subject'''
+    p_true=sum(y_test)/len(y_test)
+    p_false=1-p_true
+
+    n_subs=X_fmri.shape[0]
+    #The following two variable will not actually be probabilities (they shouldn't sum to 1). Essentially this function uses the approximation 
+    # p(x|l) \approx p(l|x)/p(l). To get a real generative model, I'd suggest just using a MLE for a gaussian model for the fMRI and dwi, and a poisson model for EEG
+    y_prob_false=[]
+    y_prob_true=[]
+    predict=[]
+
+    for row in range(n_subs):
+        if np.isnan(X_fmri[row,:]).any(): #check if there's fMRI data, if not set the relative prob to 1
+            fmri_prob_true=1
+            fmri_prob_false=1
+        else: 
+            fmri_prob_false=fmri_class.predict_proba(X_fmri[row,:].reshape(1, -1))[0][0]/p_false 
+            fmri_prob_true=fmri_class.predict_proba(X_fmri[row,:].reshape(1, -1))[0][1]/p_true
+
+        if np.isnan(X_dwi[row,:]).any():
+            dwi_prob_true=1
+            dwi_prob_false=1
+        else: 
+            dwi_prob_false=dwi_class.predict_proba(X_dwi[row,:].reshape(1, -1))[0][0]/p_false
+            dwi_prob_true=dwi_class.predict_proba(X_dwi[row,:].reshape(1, -1))[0][1]/p_true
+
+        # if np.isnan(X_eeg):
+        #     eeg_prob_true=1
+        #     eeg_prob_false=1            
+        if np.isnan(X_eeg[row,:]).any():
+            eeg_prob_true=1
+            eeg_prob_false=1
+        else: 
+            eeg_prob_false=eeg_class.predict_proba(X_eeg[row,:].reshape(1, -1))[0][0]/p_false
+            eeg_prob_true=eeg_class.predict_proba(X_eeg[row,:].reshape(1, -1))[0][1]/p_true
+        
+        prob_false=fmri_prob_false*dwi_prob_false*eeg_prob_false*p_false
+        y_prob_false.append(prob_false)
+        prob_true=fmri_prob_true*dwi_prob_true*eeg_prob_true*p_true
+        y_prob_true.append(prob_true)
+        predict.append(prob_true>=prob_false) #check which "probability" is higher. Could test whether taking the tie break the other direction (i.e. setting the prediciton to prob_true>=prob_false) changes the results
+
+    return predict,y_prob_true,y_prob_false
+    
+def nb_cca_svm(x,y):
+    ''' Fits and scores a CCA+SVM classifier for use in a Bayes fusion classifier'''
+
+    svm_classifier = Pipeline([("svm",SVC(probability=True))])
+    param_grid_svm={"clf__svm__gamma": ['auto']}
+    # param_grid_svm={"clf__svm__C": [10], "clf__svm__gamma": [.01]}
+    
+    pipe=Pipeline([("scale",StandardScaler()),("clf",svm_classifier)])
+
+    search=GridSearchCV(estimator=pipe,scoring=score_string,param_grid=param_grid_svm,cv=cv_inner,refit=True).fit(x,y)
+
+    return search
+#%%

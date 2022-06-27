@@ -5,6 +5,9 @@
 
 # User-specific files
 _data
+_stat
+_plot
+*.ipynb
 .DS_Store
 *.csv
 *.xlsx
