@@ -7,6 +7,9 @@
 _data
 _stat
 _plot
+cluster
+metric
+notebooks
 *.ipynb
 .DS_Store
 *.csv
