@@ -3,7 +3,7 @@ from models import *
 
 # Load data
 processed_data_path="/home/navid/Dropbox/Repo_2022/Epilep/Epileptogenesis/_data/processed"
-output_path="/home/navid/Dropbox/Repo_2022/Epilep/Epileptogenesis/code/_stat/"
+output_path="/home/navid/Dropbox/Repo_2022/Epilep/Epileptogenesis/code/"
 
 class_features_df,y=load_data(processed_data_path)
 class_features_df=class_features_df.to_numpy()
@@ -36,6 +36,5 @@ cv_inner=StratifiedKFold(n_splits=inner_splits, shuffle=True, random_state=seed_
 run_estimator(cv_outer,output_path,model,class_features_df,y,text,imputer,neighbors=neighbors)
 
 # %%
-
 #set up imputers for missing data
 # imputers=[KNNImputer(n_neighbors=3),IterativeImputer(random_state=42)]

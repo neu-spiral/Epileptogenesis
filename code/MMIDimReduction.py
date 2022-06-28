@@ -6,6 +6,12 @@ import chainer.functions as F
 import chainer.links as L
 from chainer.initializers import LeCunUniform
 
+seed_value= 42
+import os
+os.environ['PYTHONHASHSEED']=str(seed_value)
+import random
+random.seed(seed_value)
+np.random.seed(seed_value)
 
 class MMINet:
     """ This object obtains a non-parametric linear/nonlinear feature transformation based on 
