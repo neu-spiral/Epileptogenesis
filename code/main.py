@@ -18,14 +18,17 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--model', type=str, required=True)
 parser.add_argument('--imputer', type=str, required=True)
 parser.add_argument('--neighbors', type=int, required=True)
+parser.add_argument('--text', type=str, required=True)
 args = parser.parse_args()
 
 # model_list=['SFS','CCA']
 model=args.model
 # imputer_list=["KNN","Iterative"]
 imputer=args.imputer
+# neighbors_list=[1,2,3,5]
 neighbors=args.neighbors
-text='_fit_sep'
+# text_list=['_sample_posterior=True,max_iter=5']
+text=args.text
 
 cv_outer=StratifiedKFold(n_splits=outer_splits, shuffle=True, random_state=seed_value)
 cv_inner=StratifiedKFold(n_splits=inner_splits, shuffle=True, random_state=seed_value)
@@ -36,5 +39,3 @@ run_estimator(cv_outer,output_path,model,class_features_df,y,text,imputer,neighb
 
 #set up imputers for missing data
 # imputers=[KNNImputer(n_neighbors=3),IterativeImputer(random_state=42)]
-
-# imputed_df=impute_data("KNN",class_features_df)

@@ -6,6 +6,7 @@ from matplotlib.pyplot import imshow
 from matplotlib.lines import Line2D
 import argparse
 
+from sklearn.ensemble import RandomForestRegressor
 from sklearn import decomposition, linear_model,metrics
 from sklearn.base import BaseEstimator,ClassifierMixin
 from sklearn.decomposition import KernelPCA
@@ -275,10 +276,19 @@ def load_data(processed_data_path):
     return class_features_df,y
 
 def impute_data(imputer,train_df,test_df,fmri_key,neighbors=3):
+    # iter_estimator=RandomForestRegressor(
+    #     # We tuned the hyperparameters of the RandomForestRegressor to get a good
+    #     # enough predictive performance for a restricted execution time.
+    #     n_estimators=4,
+    #     max_depth=10,
+    #     bootstrap=True,
+    #     max_samples=0.5,
+    #     n_jobs=2,
+    #     random_state=0)
     if imputer=="KNN":
         imputer_mode=KNNImputer(n_neighbors=neighbors)
     elif imputer=="Iterative":
-        imputer_mode=IterativeImputer(random_state=seed_value)
+        imputer_mode=IterativeImputer(random_state=seed_value,sample_posterior=True,max_iter=5)
 
     # Select appropriate columns for chosen fmri strength
     # fmri_label=col_0, dmri_label=col_562, common_label=col_563, eeg_label=col_567

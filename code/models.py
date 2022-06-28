@@ -43,9 +43,15 @@ def model_run(model,i,X_train_imputed,X_test_imputed,y_train,direction='forward'
     if model=='SFS':
         sfs=None
         sfs=SequentialFeatureSelector(clf, direction=direction, scoring='f1', n_features_to_select=i+1)
-        sfs.fit(X_train_imputed,y_train)
-        X_train=sfs.transform(X_train_imputed)
+        X_train=sfs.fit_transform(X_train_imputed,y_train)
         X_test=sfs.transform(X_test_imputed)
+
+    elif model=='SMIG':
+        smig=None
+        smig=MMINet(input_dim=232, output_dim=i+1, net='linear')
+        smig.learn(X_train_imputed, y_train, num_epochs=10)
+        X_train = smig.reduce(X_train_imputed)
+        X_test = smig.reduce(X_test_imputed)
 
     elif model=='CCA':
         cca=None
