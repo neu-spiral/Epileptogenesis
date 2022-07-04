@@ -3,7 +3,7 @@ Clone this repo, and copy the _\_data_ folder from [here](https://www.dropbox.co
 
 The raw source files can be found in _/SDrive/CSL/\_Archive/2019/DT\_LONI\_Epileptogenesis\_2019_
 
-Install the necessary library versions by _pip install requirements.txt_.
+Install the necessary library versions by _pip install -r requirements.txt_.
 
 # Next Actions
 ## Potential Pipeline improvements

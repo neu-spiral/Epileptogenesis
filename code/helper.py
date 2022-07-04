@@ -131,9 +131,9 @@ def nb_tree(x,y):
 
     return search
 
-def naive_bayes_multimodal(fmri_class,X_fmri,dwi_class,X_dwi,y_test,eeg_class=np.nan,X_eeg=np.nan):
+def naive_bayes_multimodal(fmri_class,X_fmri,dwi_class,X_dwi,y_test,y_train,eeg_class=np.nan,X_eeg=np.nan):
     '''Makes a prediction based on a naive bayes multimodal fusion using a conditional independence assumption, which ignores modalities that don't have features for a given subject'''
-    p_true=sum(y_test)/len(y_test)
+    p_true=sum(y_train)/len(y_train)
     p_false=1-p_true
 
     n_subs=X_fmri.shape[0]
@@ -270,19 +270,21 @@ def load_data(processed_data_path):
     dwi_fmri_ov=ColumnTransformer([("ALL",'passthrough',[*overlap_columns,*dwi_columns])])
 
     select_all=ColumnTransformer([("ALL",'passthrough',[*mean_str_pos_columns,*mean_str_neg_columns,*overlap_columns,*eeg_columns,*dwi_columns])])
-    class_features_df=all_features_df
-    class_features_df=class_features_df.drop(["ID","Subject","Subject Number"],axis=1)
+    X_df=all_features_df
+    X_df=X_df.drop(["ID","Subject","Subject Number"],axis=1)
+    # X_df=X_df[:].values
+    X_df=X_df.to_numpy()
 
-    return class_features_df,y
+    return X_df,y
 
-def impute_data(imputer,train_df,test_df,fmri_key,neighbors=3):
+def impute_data(imputer,train_df,fmri_key,neighbors=3):
     iter_estimator=RandomForestRegressor(
         n_estimators=4,
         max_depth=10,
         bootstrap=True,
         max_samples=0.5,
         n_jobs=2,
-        random_state=0)
+        random_state=seed_value)
     if imputer=="KNN":
         imputer_mode=KNNImputer(n_neighbors=neighbors)
     elif imputer=="Iterative":
@@ -297,13 +299,14 @@ def impute_data(imputer,train_df,test_df,fmri_key,neighbors=3):
     train_df_f=np.append(x_fmri,x_dmri,axis=1)
     train_df_f=np.append(train_df_f,x_eeg,axis=1)
 
-    x_fmri=test_df[:,1+((fmri_key-1)*166):1+(fmri_key*166)]
-    x_dmri=test_df[:,499:562]
-    x_eeg=test_df[:,564:567]
-    test_df_f=np.append(x_fmri,x_dmri,axis=1)
-    test_df_f=np.append(test_df_f,x_eeg,axis=1)
+    # x_fmri=test_df[:,1+((fmri_key-1)*166):1+(fmri_key*166)]
+    # x_dmri=test_df[:,499:562]
+    # x_eeg=test_df[:,564:567]
+    # test_df_f=np.append(x_fmri,x_dmri,axis=1)
+    # test_df_f=np.append(test_df_f,x_eeg,axis=1)
     
     imputed_train=imputer_mode.fit_transform(train_df_f)
-    imputed_test=imputer_mode.transform(test_df_f)
+    # imputed_test=imputer_mode.transform(test_df_f)
 
-    return imputed_train,imputed_test
+    # return imputed_train,imputed_test
+    return imputed_train
