@@ -31,10 +31,9 @@ from sklearn.cross_decomposition import CCA
 from sklearn.feature_selection import SequentialFeatureSelector
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import pairwise_distances_argmin
+
 from astropy.stats import jackknife_resampling, jackknife_stats, binom_conf_interval
 from tqdm import tqdm
-
-## Additional imports from DWI code
 import math
 from itertools import product
 from contextlib import redirect_stdout
@@ -46,6 +45,8 @@ from statistics import mean
 #from astropy.stats import jackknife_resampling, jackknife_stats, binom_conf_interval
 from MMIDimReduction import MMINet
 from cluster.selfrepresentation import ElasticNetSubspaceClustering, SparseSubspaceClusteringOMP
+from cca_zoo.models import GCCA
+# from extra.gcca import GCCA
 
 seed_value= 42
 import os

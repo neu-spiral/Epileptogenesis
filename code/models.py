@@ -2,20 +2,22 @@ from helper import *
 
 def run_estimator(cv_outer,output_path,model,X_df,y,text,
                     imputer='KNN',neighbors=3,roc=False,fixed_feat=0,direction='forward'):
-    fmri_feat=['Neg','Pos','Ov']
-    # fmri_feat=['Neg']
-    j=0
+    # fmri_feat=['Neg','Pos','Ov']
+    fmri_feat=['Ov']
+    j=2
     results=pd.DataFrame()
     print('Model:',model,', Imputer:',imputer,', Neighbors:',neighbors)
 
     for key in fmri_feat:
         j+=1
+        # if j>2:
+            # break
         print(key,'fmri strength running')
         X_df_imputed=impute_data(imputer,X_df,fmri_key=j, neighbors=neighbors)
 
         # Varying no. of features
-        for i in tqdm(range(10)):
-        # for i in tqdm([9]):
+        # for i in tqdm(range(10)):
+        for i in tqdm([1,2,3,4,5,6,7,8,9]):
             f1_scores=[]
             fig, ax = plt.subplots()
             tprs = []
@@ -61,12 +63,13 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,
                     interp_tpr = np.interp(mean_fpr,fpr,tpr)
                     interp_tpr[0] = 0.0
                     tprs.append(interp_tpr)
-                else:
-                    plt.close()
                 aucs.append(roc_auc)
 
             # Record all results 
             results = results.append({'fMRI':key,'Feats':i+1,'Fixed_feat':fixed_feat,'Imputer':imputer,'Neighbors':neighbors,'AUC: Mean':round(mean(aucs),3),'SEM':round(1.96*stats.sem(aucs,ddof=0),3),'f1: Mean':round(mean(f1_scores),3),'SEM f1':round(1.96*stats.sem(f1_scores,ddof=0),3)},ignore_index=True)
+
+            if ~roc:
+                plt.close()
 
     if roc:
         ax.plot([0, 1], [0, 1], linestyle="--", lw=2, color="r", label="Chance", alpha=0.8)
@@ -138,16 +141,27 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,
         X_test_f,X_test_d=cca.transform(X_test_imputed[:,0:166],X_test_imputed[:,166:229])
         X_test=np.concatenate((X_test_f,X_test_d), axis=1)
 
+    elif model=='GCCA':
+        gcca=None
+        gcca=GCCA(latent_dims=i+1)
+        # gcca.fit(X_train_imputed[:,0:166],X_train_imputed[:,166:229],X_train_imputed[:,229:232])
+        X_train_f,X_train_d,X_train_e=gcca.fit_transform((X_train_imputed[:,0:166],X_train_imputed[:,166:229],X_train_imputed[:,229:232]))
+        X_train=np.concatenate((X_train_f,X_train_d), axis=1)
+        X_train=np.concatenate((X_train,X_train_e), axis=1)
+        X_test_f,X_test_d,X_test_e=gcca.transform((X_test_imputed[:,0:166],X_test_imputed[:,166:229],X_test_imputed[:,229:232]))
+        X_test=np.concatenate((X_test_f,X_test_d), axis=1)
+        X_test=np.concatenate((X_test,X_test_e), axis=1)
+
     elif model=='CCA+SFS':
         # Fix feats in one model, sweep feats in other
         cca=None
-        cca=CCA(n_components=i+1)
+        cca=CCA(n_components=fixed_feat)
         X_train_f,X_train_d=cca.fit_transform(X_train_imputed[:,0:166],X_train_imputed[:,166:229])
         X_train_cca=np.concatenate((X_train_f,X_train_d), axis=1)
         X_test_f,X_test_d=cca.transform(X_test_imputed[:,0:166],X_test_imputed[:,166:229])
         X_test_cca=np.concatenate((X_test_f,X_test_d), axis=1)
         sfs=None
-        sfs=SequentialFeatureSelector(clf, direction=direction, scoring='f1', n_features_to_select=fixed_feat)
+        sfs=SequentialFeatureSelector(clf, direction=direction, scoring='f1', n_features_to_select=i+1)
         X_train_sfs=sfs.fit_transform(X_train_imputed,y_train)
         X_test_sfs=sfs.transform(X_test_imputed)
         X_train=np.concatenate((X_train_cca,X_train_sfs), axis=1)
@@ -156,13 +170,13 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,
     elif model=='CCA+SMIG':
         # Fix feats in one model, sweep feats in other
         cca=None
-        cca=CCA(n_components=i+1)
+        cca=CCA(n_components=fixed_feat)
         X_train_f,X_train_d=cca.fit_transform(X_train_imputed[:,0:166],X_train_imputed[:,166:229])
         X_train_cca=np.concatenate((X_train_f,X_train_d), axis=1)
         X_test_f,X_test_d=cca.transform(X_test_imputed[:,0:166],X_test_imputed[:,166:229])
         X_test_cca=np.concatenate((X_test_f,X_test_d), axis=1)
         smig=None
-        smig=MMINet(input_dim=232, output_dim=fixed_feat, net='linear')
+        smig=MMINet(input_dim=232, output_dim=i+1, net='linear')
         smig.learn(X_train_imputed, y_train, num_epochs=10)
         X_train_smig = smig.reduce(X_train_imputed)
         X_test_smig = smig.reduce(X_test_imputed)

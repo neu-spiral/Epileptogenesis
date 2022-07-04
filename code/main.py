@@ -19,7 +19,7 @@ parser.add_argument('--model', type=str, required=True)
 parser.add_argument('--imputer', type=str, required=True)
 parser.add_argument('--neighbors', type=int, required=True)
 parser.add_argument('--text', type=str, required=True)
-parser.add_argument('--roc', type=str)
+parser.add_argument('--roc', type=bool)
 parser.add_argument('--fixed_feat', type=int)
 args = parser.parse_args()
 
