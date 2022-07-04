@@ -43,7 +43,7 @@ import scipy
 from scipy import io, stats
 from statistics import mean
 #from astropy.stats import jackknife_resampling, jackknife_stats, binom_conf_interval
-from MMIDimReduction import MMINet
+from extra.MMIDimReduction import MMINet
 from cluster.selfrepresentation import ElasticNetSubspaceClustering, SparseSubspaceClusteringOMP
 from cca_zoo.models import GCCA
 # from extra.gcca import GCCA
