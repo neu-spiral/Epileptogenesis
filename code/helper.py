@@ -16,7 +16,7 @@ class_labels = LabelEncoder()
 from sklearn.model_selection import cross_val_score,GridSearchCV,StratifiedKFold,KFold,train_test_split,LeaveOneOut
 from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.metrics import classification_report, confusion_matrix,mean_squared_error,r2_score
-from sklearn.metrics import auc, RocCurveDisplay, roc_curve, f1_score
+from sklearn.metrics import auc, RocCurveDisplay, roc_curve, f1_score,roc_auc_score
 from sklearn.ensemble import RandomForestClassifier,AdaBoostClassifier,VotingClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.linear_model import LinearRegression, LogisticRegression
@@ -45,7 +45,7 @@ from statistics import mean
 #from astropy.stats import jackknife_resampling, jackknife_stats, binom_conf_interval
 from extra.MMIDimReduction import MMINet
 from cluster.selfrepresentation import ElasticNetSubspaceClustering, SparseSubspaceClusteringOMP
-from cca_zoo.models import GCCA
+from cca_zoo.models import GCCA, KGCCA
 # from extra.gcca import GCCA
 
 seed_value= 42
@@ -109,12 +109,13 @@ def nb_svm(x,y):
     ''' Fits and scores a kPCA+SVM classifier for use in a naive bayes classifier'''
 
     svm_classifier = Pipeline([("pca",KernelPCA()), ("svm",SVC(probability=True))])
-    param_grid_svm={"clf__pca__n_components":[2,3,4,5,None],"clf__pca__gamma":[.01,.05,.1],"clf__pca__kernel":["linear","rbf"],
-    "clf__svm__C": [1, 10, 100], "clf__svm__gamma": [.01, .1]}
+    param_grid_svm={"clf__pca__n_components":[2,3,5,None],"clf__pca__gamma":[.01,.1],"clf__pca__kernel":["linear","rbf"]}
+
+    # "clf__svm__C": [1, 10, 100], "clf__svm__gamma": [.01, .1]
     
     pipe=Pipeline([("scale",StandardScaler()),("clf",svm_classifier)])
 
-    search=GridSearchCV(estimator=pipe,scoring=score_string,param_grid=param_grid_svm,cv=cv_inner,refit=True).fit(x,y)
+    search=GridSearchCV(estimator=pipe,scoring="f1",param_grid=param_grid_svm,cv=5,refit=True).fit(x,y)
 
     return search
 
@@ -134,7 +135,8 @@ def nb_tree(x,y):
 
 def naive_bayes_multimodal(fmri_class,X_fmri,dwi_class,X_dwi,y_test,y_train,eeg_class=np.nan,X_eeg=np.nan):
     '''Makes a prediction based on a naive bayes multimodal fusion using a conditional independence assumption, which ignores modalities that don't have features for a given subject'''
-    p_true=sum(y_train)/len(y_train)
+    p_true=sum(y_test)/len(y_test)
+    # p_true=sum(y_train)/len(y_train)
     p_false=1-p_true
 
     n_subs=X_fmri.shape[0]
@@ -190,7 +192,7 @@ def nb_cca_svm(x,y):
 
     return search
 
-def load_data(processed_data_path):
+def load_data(processed_data_path,NBF=False):
     fmri_features=pd.read_csv(f"{processed_data_path}/fMRI/fMRI_features_AAL.csv",index_col=0)
 
     # print('fMRI Subject IDs')
@@ -276,7 +278,10 @@ def load_data(processed_data_path):
     # X_df=X_df[:].values
     X_df=X_df.to_numpy()
 
-    return X_df,y
+    if NBF:
+        return X_dwi,X_eeg,X_neg_str_aal,X_pos_str_aal,X_over_aal,y
+    else:
+        return X_df,y
 
 def impute_data(imputer,train_df,fmri_key,neighbors=3):
     iter_estimator=RandomForestRegressor(

@@ -19,7 +19,7 @@ parser.add_argument('--model', type=str, required=True)
 parser.add_argument('--imputer', type=str, required=True)
 parser.add_argument('--neighbors', type=int, required=True)
 parser.add_argument('--text', type=str, required=True)
-parser.add_argument('--roc', type=bool)
+parser.add_argument('--roc_flag', type=bool)
 parser.add_argument('--fixed_feat', type=int)
 args = parser.parse_args()
 
@@ -31,13 +31,13 @@ imputer=args.imputer
 neighbors=args.neighbors
 # text_list=['_sample_posterior=True,max_iter=5']
 text=args.text
-roc=args.roc
+roc_flag=args.roc_flag
 fixed_feat=args.fixed_feat
 
 cv_outer=StratifiedKFold(n_splits=outer_splits, shuffle=True, random_state=seed_value)
 cv_inner=StratifiedKFold(n_splits=inner_splits, shuffle=True, random_state=seed_value)
 
-run_estimator(cv_outer,output_path,model,X_df,y,text,imputer,neighbors,roc,fixed_feat)
+run_estimator(cv_outer,output_path,model,X_df,y,text,imputer,neighbors,roc_flag,fixed_feat)
 
 # %%
 #set up imputers for missing data
