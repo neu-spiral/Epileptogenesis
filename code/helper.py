@@ -21,7 +21,7 @@ from sklearn.ensemble import RandomForestClassifier,AdaBoostClassifier,VotingCla
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.feature_selection import RFE, SelectKBest, f_classif, chi2, mutual_info_classif
-from sklearn.manifold import TSNE
+from sklearn.manifold import TSNE, MDS
 from sklearn.naive_bayes import GaussianNB
 from sklearn.experimental import enable_iterative_imputer
 from sklearn.impute import IterativeImputer
@@ -115,7 +115,7 @@ def nb_svm(x,y):
     
     pipe=Pipeline([("scale",StandardScaler()),("clf",svm_classifier)])
 
-    search=GridSearchCV(estimator=pipe,scoring="f1",param_grid=param_grid_svm,cv=5,refit=True).fit(x,y)
+    search=GridSearchCV(estimator=pipe,scoring="roc_auc",param_grid=param_grid_svm,cv=5,refit=True).fit(x,y)
 
     return search
 
@@ -283,7 +283,7 @@ def load_data(processed_data_path,NBF=False):
     else:
         return X_df,y
 
-def impute_data(imputer,train_df,fmri_key,neighbors=3):
+def impute_data(imputer,train_df,test_df,fmri_key,neighbors=3):
     iter_estimator=RandomForestRegressor(
         n_estimators=4,
         max_depth=10,
@@ -305,14 +305,14 @@ def impute_data(imputer,train_df,fmri_key,neighbors=3):
     train_df_f=np.append(x_fmri,x_dmri,axis=1)
     train_df_f=np.append(train_df_f,x_eeg,axis=1)
 
-    # x_fmri=test_df[:,1+((fmri_key-1)*166):1+(fmri_key*166)]
-    # x_dmri=test_df[:,499:562]
-    # x_eeg=test_df[:,564:567]
-    # test_df_f=np.append(x_fmri,x_dmri,axis=1)
-    # test_df_f=np.append(test_df_f,x_eeg,axis=1)
+    x_fmri=test_df[:,1+((fmri_key-1)*166):1+(fmri_key*166)]
+    x_dmri=test_df[:,499:562]
+    x_eeg=test_df[:,564:567]
+    test_df_f=np.append(x_fmri,x_dmri,axis=1)
+    test_df_f=np.append(test_df_f,x_eeg,axis=1)
     
     imputed_train=imputer_mode.fit_transform(train_df_f)
-    # imputed_test=imputer_mode.transform(test_df_f)
+    imputed_test=imputer_mode.transform(test_df_f)
 
-    # return imputed_train,imputed_test
-    return imputed_train
+    return imputed_train,imputed_test
+    # return imputed_train

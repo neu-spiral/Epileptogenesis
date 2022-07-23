@@ -18,9 +18,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--model', type=str, required=True)
 parser.add_argument('--imputer', type=str, required=True)
 parser.add_argument('--neighbors', type=int, required=True)
-parser.add_argument('--text', type=str, required=True)
-parser.add_argument('--roc_flag', type=bool)
+parser.add_argument('--text', type=str)
+parser.add_argument('--roc_flag', type=str)
 parser.add_argument('--fixed_feat', type=int)
+parser.add_argument('--manifold_opts', type=str)
 args = parser.parse_args()
 
 # model_list=['SFS','CCA','NBF']
@@ -33,12 +34,17 @@ neighbors=args.neighbors
 text=args.text
 roc_flag=args.roc_flag
 fixed_feat=args.fixed_feat
+manifold_opts=args.manifold_opts
 
 cv_outer=StratifiedKFold(n_splits=outer_splits, shuffle=True, random_state=seed_value)
 cv_inner=StratifiedKFold(n_splits=inner_splits, shuffle=True, random_state=seed_value)
 
-run_estimator(cv_outer,output_path,model,X_df,y,text,imputer,neighbors,roc_flag,fixed_feat)
+run_estimator(cv_outer,output_path,model,X_df,y,text,manifold_opts,imputer,neighbors,roc_flag,fixed_feat)
+# plot_manifold(output_path,model,X_df,y,text,manifold_opts,imputer,neighbors,fixed_feat)
 
 # %%
 #set up imputers for missing data
 # imputers=[KNNImputer(n_neighbors=3),IterativeImputer(random_state=42)]
+
+        # if manifold_flag:
+        #     plot_manifold(output_path,model,X_df,y,text,imputer,neighbors,fixed_feat)

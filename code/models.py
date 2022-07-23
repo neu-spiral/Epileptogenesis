@@ -1,24 +1,25 @@
 from helper import *
 
-def run_estimator(cv_outer,output_path,model,X_df,y,text,
-                    imputer='KNN',neighbors=3,roc_flag=False,fixed_feat=0,direction='forward'):
-    fmri_feat=['Neg','Pos','Ov']
-    # fmri_feat=['Ov']
-    j=0
+def run_estimator(cv_outer,output_path,model,X_df,y,text,manifold_opts,
+                    imputer='KNN',neighbors=3,roc_flag='False',fixed_feat=0,direction='forward'):
+    # fmri_feat=['Neg','Pos','Ov']
+    fmri_feat=['Pos']
+    j=1
     results=pd.DataFrame()
     print('Model:',model,', Imputer:',imputer,', Neighbors:',neighbors)
 
     for key in fmri_feat:
         j+=1
-        # if j>2:
-            # break
+        if j>2:
+            break
         print(key,'fmri strength running')
-        X_df_imputed=impute_data(imputer,X_df,fmri_key=j, neighbors=neighbors)
 
         # Varying no. of features
         # for i in tqdm(range(10)):
-        for i in tqdm([1]):
+        for i in tqdm([6]):
             f1_scores=[]
+            sensitivity1 = []
+            specificity1 = [] 
             fig, ax = plt.subplots()
             tprs = []
             aucs = []
@@ -28,6 +29,8 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,
                 
                 y_train = y[train_idx]
                 y_test = y[test_idx]
+                X_train_raw = X_df[train_idx]
+                X_test_raw = X_df[test_idx]
                 
                 if model=='NBF':
                     processed_data_path="/home/navid/Dropbox/Repo_2022/Epilep/Epileptogenesis/_data/processed"
@@ -64,69 +67,90 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,
 
                 else:
                     # Imputing the train and test splits
-                    X_train = X_df_imputed[train_idx,:]
-                    X_test = X_df_imputed[test_idx,:]
-                    # X_train_imputed,X_test_imputed=impute_data(imputer,X_train,X_test,fmri_key=j, neighbors=neighbors)
+                    X_train,X_test=impute_data(imputer,X_train_raw,X_test_raw,fmri_key=j, neighbors=neighbors)
 
                     # Fit and test with desired classifier
-                    # y_pred,fpr,tpr,roc_auc=model_run(model,i,k,ax,X_train_imputed,X_test_imputed,y_train,y_test,roc_flag,direction='forward')
-                    y_pred,fpr,tpr,roc_auc=model_run(model,i,k,ax,X_train,X_test,y_train,y_test,roc_flag,direction,fixed_feat)
+                    y_pred,fpr,tpr,roc_auc,X_test_model=model_run(model,i,k,ax,X_train,X_test,y_train,y_test,roc_flag,direction,fixed_feat)   
+                    if manifold_opts=='X_test':
+                        if k==0 and manifold_opts=='X_test':
+                            X_model=np.array(X_test_model)
+                            y_model=np.array(y_test)
+                        else:                          
+                            X_test_model=np.array(X_test_model)
+                            y_test=np.array(y_test)
+                            X_model=np.append(X_model,X_test_model,axis=0)   
+                            y_model=np.append(y_model,y_test,axis=0) 
 
+                
+                cm1 = confusion_matrix(y_test,y_pred)
+                # total1 = sum(sum(cm1))
+
+                sensitivity1.append(cm1[0,0]/(cm1[0,0]+cm1[0,1]))        
+                specificity1.append(cm1[1,1]/(cm1[1,0]+cm1[1,1]))   
                 f1_scores.append(f1_score(y_test, y_pred, average='weighted'))
-                # if roc_flag:
-                #     interp_tpr = np.interp(mean_fpr,fpr,tpr)
-                #     interp_tpr[0] = 0.0
-                #     tprs.append(interp_tpr)
                 aucs.append(roc_auc)
+                if roc_flag:
+                    interp_tpr = np.interp(mean_fpr,fpr,tpr)
+                    interp_tpr[0] = 0.0
+                    tprs.append(interp_tpr)
+                
+            if manifold_opts=='X_test':
+                # X_model=np.array(X_test_model)    
+                # y_model=np.array(y_model)  
+                print(X_model.shape)
+                print(y_model.shape)
+                plot_manifold(output_path,model,X_model,y_model,text,manifold_opts,imputer,neighbors,fixed_feat)               
 
             # Record all results 
-            results = results.append({'fMRI':key,'Feats':i+1,'Fixed_feat':fixed_feat,'Imputer':imputer,'Neighbors':neighbors,'AUC: Mean':round(mean(aucs),3),'SEM':round(1.96*stats.sem(aucs,ddof=0),3),'f1: Mean':round(mean(f1_scores),3),'SEM f1':round(1.96*stats.sem(f1_scores,ddof=0),3)},ignore_index=True)
+            results = results.append({'fMRI':key,'Feats':i+1,'Fixed_feat':fixed_feat,'Imputer':imputer,'Neighbors':neighbors,'AUC: Mean':round(mean(aucs),3),'SEM':round(1.96*stats.sem(aucs,ddof=0),3),'Sensitivity':round(mean(sensitivity1),3),'Specificity':round(mean(specificity1),3),'f1: Mean':round(mean(f1_scores),3),'SEM f1':round(1.96*stats.sem(f1_scores,ddof=0),3)},ignore_index=True)
 
-            if ~roc_flag:
-                plt.close()
+            # if ~roc_flag:
+            #     plt.close()
 
-    # if roc_flag:
-    #     ax.plot([0, 1], [0, 1], linestyle="--", lw=2, color="r", label="Chance", alpha=0.8)
+    if roc_flag=='True':
+        ax.plot([0, 1], [0, 1], linestyle="--", lw=2, color="r", label="Chance", alpha=0.8)
 
-    #     mean_tpr = np.mean(tprs, axis=0)
-    #     mean_tpr[-1] = 1.0
-    #     mean_auc = auc(mean_fpr, mean_tpr)
-    #     std_auc = np.std(aucs)
-    #     ax.plot(
-    #         mean_fpr,
-    #         mean_tpr,
-    #         color="b",
-    #         label=r"Mean ROC (AUC = %0.2f $\pm$ %0.2f)" % (mean_auc, std_auc),
-    #         lw=2,
-    #         alpha=0.8,
-    #     )
-    #     # std_tpr = np.std(tprs, axis=0)
-    #     # tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
-    #     # tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
+        mean_tpr = np.mean(tprs, axis=0)
+        mean_tpr[-1] = 1.0
+        mean_auc = auc(mean_fpr, mean_tpr)
+        std_auc = np.std(aucs)
+        ax.plot(
+            mean_fpr,
+            mean_tpr,
+            color="b",
+            label=r"Mean ROC (AUC = %0.2f $\pm$ %0.2f)" % (mean_auc, std_auc),
+            lw=2,
+            alpha=0.8,
+        )
+        # std_tpr = np.std(tprs, axis=0)
+        # tprs_upper = np.minimum(mean_tpr + std_tpr, 1)
+        # tprs_lower = np.maximum(mean_tpr - std_tpr, 0)
 
-    #     # Using Binomial conf intervals, as laid out in Sourati 2015
-    #     [tprs_upper, tprs_lower] = binom_conf_interval(mean_tpr*48, 48, confidence_level=0.95, interval='wilson')  
+        # Using Binomial conf intervals, as laid out in Sourati 2015
+        [tprs_upper, tprs_lower] = binom_conf_interval(mean_tpr*48, 48, confidence_level=0.95, interval='wilson')  
 
-    #     ax.fill_between(
-    #         mean_fpr,
-    #         tprs_lower,
-    #         tprs_upper,
-    #         color="grey",
-    #         alpha=0.2,
-    #         # label=r"$\pm$ 1 std. dev.",            
-    #         label=r'95% level of confidence',
-    #     )
+        ax.fill_between(
+            mean_fpr,
+            tprs_lower,
+            tprs_upper,
+            color="grey",
+            alpha=0.2,
+            # label=r"$\pm$ 1 std. dev.",            
+            label=r'95% level of confidence',
+        )
 
-    #     ax.set(
-    #         xlim=[-0.05, 1.05],
-    #         ylim=[-0.05, 1.05],
-    #         # title="Receiver operating characteristic example",
-    #     )
-    #     ax.legend(loc="lower right")
-    #     plt.savefig(output_path+'_plot/'+model+'_'+imputer+'_'+str(neighbors)+'_fixed_'+str(fixed_feat)+text+'.png') 
+        ax.set(
+            xlim=[-0.05, 1.05],
+            ylim=[-0.05, 1.05],
+            # title="Receiver operating characteristic example",
+        )
+        ax.legend(loc="lower right")
+        plt.xlabel('1 - Specificity')
+        plt.ylabel('Sensitivity')
+        plt.savefig(output_path+'_plot/'+model+'_'+key+'_'+imputer+'_'+str(neighbors)+'_fixed_'+str(fixed_feat)+text+'.png') 
     
     # Export all results to csv
-    results.to_csv(output_path+'_stat/'+model+'_'+imputer+'_'+str(neighbors)+'_fixed_'+str(fixed_feat)+text+'.csv')
+    results.to_csv(output_path+'_stat/'+model+'_'+key+'_'+imputer+'_'+str(neighbors)+'_fixed_'+str(fixed_feat)+text+'.csv')
 
 def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,
                 y_train,y_test,roc_flag,direction,fixed_feat):
@@ -222,4 +246,55 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,
         ax=ax,
     )
 
-    return y_pred,viz.fpr,viz.tpr,viz.roc_auc
+    return y_pred,viz.fpr,viz.tpr,viz.roc_auc,X_test
+
+def plot_manifold(output_path,model,X,y,text,manifold_opts,
+                    imputer='KNN',neighbors=3,fixed_feat=0):
+
+    
+    fmri_feat=['Neg','Pos','Ov']
+    j=0
+    for key in fmri_feat:
+        j+=1
+        if manifold_opts=='X_test':
+            X_df_imputed=X
+        elif manifold_opts=='no_impute':
+            X_df_imputed=X
+        else:
+            X_df_imputed=impute_data(imputer,X,fmri_key=j, neighbors=neighbors)
+
+        manifold = MDS(n_components=3)
+        manifold_results = manifold.fit_transform(X_df_imputed)
+
+        # fig, ax = plt.subplots()
+        ax = plt.figure(figsize=(8,8)).gca(projection='3d')
+        cm = plt.cm.viridis
+
+        # For 3-D
+        scat = ax.scatter(
+            xs=manifold_results[:,0], 
+            ys=manifold_results[:,1], 
+            zs=manifold_results[:,2], 
+            c=y,
+            s=100,
+            cmap=cm)
+
+        # For 2-D
+        # scat = ax.scatter(
+        #     x=manifold_results[:,0], 
+        #     y=manifold_results[:,1], 
+        #     c=y,
+        #     cmap=cm)
+        legend_elem = [Line2D([0], [0], marker='o', color=cm(0.),lw=0,label='No Seizure'),
+                        Line2D([0], [0], marker='o', color=cm(1.),lw=0,label='Late Seizure')]
+
+        legend1 = ax.legend(handles=legend_elem,
+                            loc="upper right")
+
+        ax.add_artist(legend1)
+        ax.set_xlabel('Component-1')
+        ax.set_ylabel('Component-2')
+        ax.set_zlabel('Component-3')
+
+        plt.tight_layout()     
+        plt.savefig(output_path+'_plot/'+model+'_'+key+'_'+imputer+'_'+str(neighbors)+'_fixed_'+str(fixed_feat)+text+'_manifold.png')     
