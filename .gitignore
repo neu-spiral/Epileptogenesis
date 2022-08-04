@@ -8,6 +8,7 @@ _data
 _stat
 _plot
 _check
+extra
 cluster
 metrics
 notebooks
