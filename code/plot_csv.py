@@ -62,7 +62,7 @@ with open(f'{output_path}'+name4+'.csv','r') as csvfile:
 # 		marker = 'o',label = "SMIG(x_d,x_e,x_f-ov)")
 
 # auc1,auc2,auc3 = auc(x1, y1),auc(x2, y2),auc(x3, y3)
-auc1,auc2,auc3,auc4 = auc(x1, y1),auc(x2, y2),auc(x3, y3),0.792
+auc1,auc2,auc3,auc4 = auc(x1, y1),auc(x2, y2),auc(x3, y3),auc(x4, y4)
 
 ax.plot([0, 1], [0, 1], linestyle="--", lw=2, color="y", label="Chance", alpha=0.8)
 
