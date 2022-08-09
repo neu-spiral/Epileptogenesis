@@ -41,6 +41,7 @@ import pandas as pd
 import time
 import scipy
 from scipy import io, stats
+from scipy.stats.stats import pearsonr
 from statistics import mean
 #from astropy.stats import jackknife_resampling, jackknife_stats, binom_conf_interval
 from extra.MMIDimReduction import MMINet

@@ -23,7 +23,7 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,options,
 
             # Varying no. of features
             # for i in tqdm(range(10)):
-            for i in tqdm([2]):
+            for i in tqdm([4]):
                 f1_scores=[]
                 sensitivity1 = []
                 specificity1 = [] 
@@ -172,15 +172,49 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,X_train_2,X_test_2,
     if model=='SFS':
         sfs=None
         sfs=SequentialFeatureSelector(clf, direction=direction, scoring='roc_auc', n_features_to_select=i+1)
-        X_train=sfs.fit_transform(X_train_imputed,y_train)
-        X_test=sfs.transform(X_test_imputed)
+        X_train_sfs=sfs.fit_transform(X_train_imputed,y_train)
+        X_test_sfs=sfs.transform(X_test_imputed)
+
+        # removing features above a certain mutual correlation coefficient
+        keep_col=[]
+        for j in range(X_train_sfs.shape[1]):
+            keep_col.append(j)
+            if j==0:
+                continue
+            else:
+                for m in range(j):
+                    r_coef=pearsonr(X_train_sfs[:,m],X_train_sfs[:,j])[0]
+                    if r_coef>=0.5:
+                        keep_col.remove(j)
+                        break
+
+        X_train=X_train_sfs[:,keep_col]
+        X_test=X_test_sfs[:,keep_col]
+        print('feat=',i+1,'keep_col=',len(keep_col))
 
     elif model=='SMIG':
         smig=None
         smig=MMINet(input_dim=232, output_dim=i+1, net='linear')
         smig.learn(X_train_imputed, y_train, num_epochs=10)
-        X_train = smig.reduce(X_train_imputed)
-        X_test = smig.reduce(X_test_imputed)
+        X_train_smig = smig.reduce(X_train_imputed)
+        X_test_smig = smig.reduce(X_test_imputed)
+
+        # removing features above a certain mutual correlation coefficient
+        keep_col=[]
+        for j in range(X_train_smig.shape[1]):
+            keep_col.append(j)
+            if j==0:
+                continue
+            else:
+                for m in range(j):
+                    r_coef=pearsonr(X_train_smig[:,m],X_train_smig[:,j])[0]
+                    if r_coef>=0.5:
+                        keep_col.remove(j)
+                        break
+
+        X_train=X_train_smig[:,keep_col]
+        X_test=X_test_smig[:,keep_col]
+        print('feat=',i+1,'keep_col=',len(keep_col))
 
     elif model=='CCA':
         cca=None
@@ -189,6 +223,23 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,X_train_2,X_test_2,
         X_train=np.concatenate((X_train_f,X_train_d), axis=1)
         X_test_f,X_test_d=cca.transform(X_test_imputed[:,0:166],X_test_imputed[:,166:229])
         X_test=np.concatenate((X_test_f,X_test_d), axis=1)
+
+        # removing features above a certain mutual correlation coefficient
+        keep_col=[]
+        for j in range(X_train.shape[1]):
+            keep_col.append(j)
+            if j==0:
+                continue
+            else:
+                for m in range(j):
+                    r_coef=pearsonr(X_train[:,m],X_train[:,j])[0]
+                    if r_coef>=0.5:
+                        keep_col.remove(j)
+                        break
+
+        X_train=X_train[:,keep_col]
+        X_test=X_test[:,keep_col]
+        print('feat=',i+1,'keep_col=',len(keep_col))
 
     elif model=='GCCA':
         gcca=None
@@ -224,8 +275,43 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,X_train_2,X_test_2,
         sfs=SequentialFeatureSelector(clf, direction=direction, scoring='roc_auc', n_features_to_select=i+1)
         X_train_sfs=sfs.fit_transform(X_train_imputed,y_train)
         X_test_sfs=sfs.transform(X_test_imputed)
+
+        # # removing features above a certain mutual correlation coefficient
+        # keep_col=[]
+        # for j in range(X_train_sfs.shape[1]):
+        #     keep_col.append(j)
+        #     if j==0:
+        #         continue
+        #     else:
+        #         for m in range(j):
+        #             r_coef=pearsonr(X_train_sfs[:,m],X_train_sfs[:,j])[0]
+        #             if r_coef>=0.5:
+        #                 keep_col.remove(j)
+        #                 break
+
+        # X_train_sfs=X_train_sfs[:,keep_col]
+        # X_test_sfs=X_test_sfs[:,keep_col]
+        # print('feat=',i+1,'keep_col=',len(keep_col))
+
         X_train=np.concatenate((X_train_cca,X_train_sfs), axis=1)
         X_test=np.concatenate((X_test_cca,X_test_sfs), axis=1)
+
+        # removing features above a certain mutual correlation coefficient
+        keep_col=[]
+        for j in range(X_train.shape[1]):
+            keep_col.append(j)
+            if j<2*fixed_feat:
+                continue
+            else:
+                for m in range(j):
+                    r_coef=pearsonr(X_train[:,m],X_train[:,j])[0]
+                    if r_coef>=0.5:
+                        keep_col.remove(j)
+                        break
+
+        X_train=X_train[:,keep_col]
+        X_test=X_test[:,keep_col]
+        print('feats=',i+1+2*fixed_feat,'keep_col=',len(keep_col))
 
     elif model=='CCA+SMIG':
         # Fix feats in one model, sweep feats in other
@@ -240,6 +326,24 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,X_train_2,X_test_2,
         smig.learn(X_train_imputed, y_train, num_epochs=10)
         X_train_smig = smig.reduce(X_train_imputed)
         X_test_smig = smig.reduce(X_test_imputed)
+
+        # removing features above a certain mutual correlation coefficient
+        keep_col=[]
+        for j in range(X_train_smig.shape[1]):
+            keep_col.append(j)
+            if j==0:
+                continue
+            else:
+                for m in range(j):
+                    r_coef=pearsonr(X_train_smig[:,m],X_train_smig[:,j])[0]
+                    if r_coef>=0.5:
+                        keep_col.remove(j)
+                        break
+
+        X_train_smig=X_train_smig[:,keep_col]
+        X_test_smig=X_test_smig[:,keep_col]
+        print('feat=',i+1,'keep_col=',len(keep_col))
+
         X_train=np.concatenate((X_train_cca,X_train_smig), axis=1)
         X_test=np.concatenate((X_test_cca,X_test_smig), axis=1)
 
