@@ -16,7 +16,7 @@ class_labels = LabelEncoder()
 from sklearn.model_selection import cross_val_score,GridSearchCV,StratifiedKFold,KFold,train_test_split,LeaveOneOut
 from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.metrics import classification_report, confusion_matrix,mean_squared_error,r2_score
-from sklearn.metrics import auc, RocCurveDisplay, roc_curve, f1_score,roc_auc_score
+from sklearn.metrics import auc, RocCurveDisplay, roc_curve, f1_score,roc_auc_score,mutual_info_score
 from sklearn.ensemble import RandomForestClassifier,AdaBoostClassifier,VotingClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.linear_model import LinearRegression, LogisticRegression
@@ -43,7 +43,6 @@ import scipy
 from scipy import io, stats
 from scipy.stats.stats import pearsonr
 from statistics import mean
-#from astropy.stats import jackknife_resampling, jackknife_stats, binom_conf_interval
 from extra.MMIDimReduction import MMINet
 from cluster.selfrepresentation import ElasticNetSubspaceClustering, SparseSubspaceClusteringOMP
 from cca_zoo.models import GCCA, KGCCA
