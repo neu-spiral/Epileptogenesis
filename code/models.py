@@ -7,7 +7,7 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,options,
     fmri_feat=['Ov']
     l=1
     j=2
-    results,roc_data=pd.DataFrame(),pd.DataFrame()
+    results,roc_data,y_info,x_feats=pd.DataFrame(),pd.DataFrame(),pd.DataFrame(),pd.DataFrame()
     print('Model:',model,', Imputer:',imputer,', Neighbors:',neighbors)
 
     for key_2 in fmri_feat_outer:
@@ -24,7 +24,7 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,options,
             # for i in tqdm(range(10)):
             for i in tqdm([4]):
                 f1_scores,sensitivity1,specificity1,tprs,aucs = [],[],[],[],[]
-                y_pred_all,y_test_all=[],[]
+                # y_pred_all,y_test_all=[],[]
                 fig, ax = plt.subplots()
                 mean_fpr = np.linspace(0, 1, 100)
 
@@ -58,15 +58,19 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,options,
                         fmri_class=nb_svm(X_train_fmri,y_train_fmri)
                         dwi_class=nb_svm(X_train_dwi,y_train_dwi)
                         eeg_class=nb_svm(X_train_eeg,y_train_eeg)
+                        # fmri_class=nb_tree(X_train_fmri,y_train_fmri)
+                        # dwi_class=nb_tree(X_train_dwi,y_train_dwi)
+                        # eeg_class=nb_tree(X_train_eeg,y_train_eeg)
 
                         fmri_grid = pd.DataFrame(fmri_class.cv_results_)
-                        dwi_grid = pd.DataFrame(fmri_class.cv_results_)
-                        # eeg_grid = pd.DataFrame(fmri_class.cv_results_)
+                        dwi_grid = pd.DataFrame(dwi_class.cv_results_)
+                        eeg_grid = pd.DataFrame(eeg_class.cv_results_)
                         grid_search = fmri_grid.append(dwi_grid)
+                        grid_search = grid_search.append(eeg_grid)
                         grid_search.to_csv(output_path+'_stat/'+'grid_search_nbf_svm.csv')
 
-                        y_pred,y_prob_true,y_prob_false=naive_bayes_multimodal(fmri_class,X_test_fmri,dwi_class,X_test_dwi,y_test,y_train,eeg_class,X_test_eeg)
-                        roc_auc=roc_auc_score(y_test, y_pred)
+                        y_pred,y_proba,y_prob_false=naive_bayes_multimodal(fmri_class,X_test_fmri,dwi_class,X_test_dwi,y_test,y_train,eeg_class,X_test_eeg)
+                        roc_auc=roc_auc_score(y_test, y_proba)
 
                     else:
                         # Imputing the train and test splits
@@ -75,8 +79,13 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,options,
 
                         # Fit and test with desired classifier
                         y_pred,fpr,tpr,roc_auc,X_test_model=model_run(model,i,k,ax,X_train,X_test,X_train_2,X_test_2,y_train,y_test,roc_flag,direction,fixed_feat)
-                        y_pred_all.append(y_pred)   
-                        y_test_all.append(y_test)   
+                        # y_pred,fpr,tpr,roc_auc,X_test_model,y_proba=model_run(model,i,k,ax,X_train,X_test,X_train_2,X_test_2,y_train,y_test,roc_flag,direction,fixed_feat)
+                        # print('len',len(y_pred))
+                        # print('size',y_pred.size)
+                        for m in range(len(y_pred)):
+                            x_feats=x_feats.append({'X_test_model':X_test_model[m]},ignore_index=True)
+                            # y_info=y_info.append({'y_test':y_test[m]*1,'y_pred':y_pred[m]*1,
+                            # 'y_proba':y_proba[m,1]},ignore_index=True)                            
                         if options=='X_test':
                             if k==0 and options=='X_test':
                                 X_model=np.array(X_test_model)
@@ -87,8 +96,9 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,options,
                                 X_model=np.append(X_model,X_test_model,axis=0)   
                                 y_model=np.append(y_model,y_test,axis=0) 
 
-                    
+                    y_test=np.array(y_test)
                     cm1 = confusion_matrix(y_test,y_pred)
+                    # cm1 = confusion_matrix(y_test,y_proba)
                     # total1 = sum(sum(cm1))
 
                     sensitivity1.append(cm1[0,0]/(cm1[0,0]+cm1[0,1]))        
@@ -108,7 +118,11 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,options,
                     plot_manifold(output_path,model,X_model,y_model,text,options,imputer,neighbors,fixed_feat)               
 
                 # Record all results 
-                results = results.append({'fMRI_out':key_2,'fMRI_in':key,'Feats_fix':fixed_feat,'Feats_var':i+1,'Imputer':imputer,'Neighbors':neighbors,'AUC: Mean':round(mean(aucs),3),'SEM':round(1.96*stats.sem(aucs,ddof=0),3),'Sensitivity':round(mean(sensitivity1),3),'Specificity':round(mean(specificity1),3),'f1: Mean':round(mean(f1_scores),3),'SEM f1':round(1.96*stats.sem(f1_scores,ddof=0),3)},ignore_index=True)
+                results = results.append({'fMRI_out':key_2,'fMRI_in':key,'Feats_fix':fixed_feat,'Feats_var':i+1,
+                'Imputer':imputer,'Neighbors':neighbors,'AUC: Mean':round(mean(aucs),3),
+                'f1: Mean':round(mean(f1_scores),3),'Sensitivity':round(mean(sensitivity1),3),
+                'Specificity':round(mean(specificity1),3)},ignore_index=True)
+                # ,'f1: Mean':round(mean(f1_scores),3),'SEM f1':round(1.96*stats.sem(f1_scores,ddof=0),3)
 
                 if roc_flag=='False':
                     plt.close()
@@ -133,7 +147,13 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,options,
         if options=='roc_data':
             for m in range(mean_fpr.size):
                 roc_data = roc_data.append({'mean_fpr':mean_fpr[m],'mean_tpr':mean_tpr[m]},ignore_index=True)
+            x_feats.to_csv(output_path+'extra/'+model+'_'+key+'_'+imputer+'_'+str(neighbors)+'_fixed_'+str(fixed_feat)+text+'_x_feats.csv',index=False)
             roc_data.to_csv(output_path+'extra/'+model+'_'+key+'_'+imputer+'_'+str(neighbors)+'_fixed_'+str(fixed_feat)+text+'_roc_pts.csv')
+
+        elif options=='y_info':
+            y_info.to_csv(output_path+'extra/'+model+'_'+key+'_'+imputer+'_'+str(neighbors)+'_fixed_'+str(fixed_feat)+text+'_y_info.csv',index=False)
+            # ,header=None
+
 
         # Using Binomial conf intervals, as laid out in Sourati 2015
         [tprs_upper, tprs_lower] = binom_conf_interval(mean_tpr*48, 48, confidence_level=0.95, interval='wilson')  
@@ -165,30 +185,32 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,X_train_2,X_test_2,
                 y_train,y_test,roc_flag,direction,fixed_feat):
     # SVM Classifier
     clf=None
-    clf=make_pipeline(StandardScaler(), SVC(gamma='auto'))
+    clf=make_pipeline(StandardScaler(), AdaBoostClassifier(n_estimators=50))
+    # clf=make_pipeline(StandardScaler(), SVC(gamma='auto',probability=True))
+    # clf=make_pipeline(StandardScaler(), SVC(gamma='auto'))
 
     if model=='SFS':
         sfs=None
         sfs=SequentialFeatureSelector(clf, direction=direction, scoring='roc_auc', n_features_to_select=i+1)
-        X_train_sfs=sfs.fit_transform(X_train_imputed,y_train)
-        X_test_sfs=sfs.transform(X_test_imputed)
+        X_train=sfs.fit_transform(X_train_imputed,y_train)
+        X_test=sfs.transform(X_test_imputed)
 
-        # removing features above a certain mutual correlation coefficient
-        keep_col=[]
-        for j in range(X_train_sfs.shape[1]):
-            keep_col.append(j)
-            if j==0:
-                continue
-            else:
-                for m in range(j):
-                    r_coef=pearsonr(X_train_sfs[:,m],X_train_sfs[:,j])[0]
-                    if r_coef>=0.5:
-                        keep_col.remove(j)
-                        break
+        # # removing features above a certain mutual correlation coefficient
+        # keep_col=[]
+        # for j in range(X_train.shape[1]):
+        #     keep_col.append(j)
+        #     if j==0:
+        #         continue
+        #     else:
+        #         for m in range(j):
+        #             r_coef=pearsonr(X_train[:,m],X_train[:,j])[0]
+        #             if r_coef>=0.5:
+        #                 keep_col.remove(j)
+        #                 break
 
-        X_train=X_train_sfs[:,keep_col]
-        X_test=X_test_sfs[:,keep_col]
-        print('feat=',i+1,'keep_col=',len(keep_col))
+        # X_train=X_train[:,keep_col]
+        # X_test=X_test[:,keep_col]
+        # print('feat=',i+1,'keep_col=',len(keep_col))
 
     elif model=='SMIG':
         smig=None
@@ -348,6 +370,7 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,X_train_2,X_test_2,
 
     clf.fit(X_train,y_train)
     y_pred=clf.predict(X_test)
+    # y_proba=clf.predict_proba(X_test)
 
     # ROC-AUC plot
     viz = RocCurveDisplay.from_estimator(
@@ -360,7 +383,11 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,X_train_2,X_test_2,
         ax=ax,
     )
 
-    return y_pred,viz.fpr,viz.tpr,viz.roc_auc,X_test
+    if model=='CCA+SFS':
+        return y_pred,viz.fpr,viz.tpr,viz.roc_auc,X_test_sfs
+    else:
+        return y_pred,viz.fpr,viz.tpr,viz.roc_auc,X_test
+        # return y_pred,viz.fpr,viz.tpr,viz.roc_auc,X_test,y_proba
 
 def plot_manifold(output_path,model,X,y,text,options,
                     imputer='KNN',neighbors=3,fixed_feat=0):

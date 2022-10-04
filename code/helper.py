@@ -109,7 +109,8 @@ def nb_svm(x,y):
     ''' Fits and scores a kPCA+SVM classifier for use in a naive bayes classifier'''
 
     svm_classifier = Pipeline([("pca",KernelPCA()), ("svm",SVC(probability=True))])
-    param_grid_svm={"clf__pca__n_components":[2,3,5,None],"clf__pca__gamma":[.01,.1],"clf__pca__kernel":["linear","rbf"]}
+    # param_grid_svm={"clf__pca__n_components":[2,3,5,None],"clf__pca__gamma":[.01,.1],
+    param_grid_svm={"clf__pca__n_components":[3],"clf__pca__gamma":[.01,.1],"clf__pca__kernel":["linear","rbf"]}
 
     # "clf__svm__C": [1, 10, 100], "clf__svm__gamma": [.01, .1]
     
@@ -122,12 +123,12 @@ def nb_svm(x,y):
 def nb_tree(x,y):
     ''' Fits and scores a tree-based classifier for use in a naive bayes classifier'''
 
-    tree_classifier= Pipeline([("kbest",SelectKBest(chi2)), ("tree",AdaBoostClassifier())])
-    param_grid_tree={"clf__kbest__k":[2,3,5,7,10,15],"clf__tree__n_estimators":[10,50,100]}
+    tree_classifier= Pipeline([("kbest",SelectKBest(f_classif)), ("tree",AdaBoostClassifier())])
+    param_grid_tree={"clf__kbest__k":[2,3,5,7,10],"clf__tree__n_estimators":[50]}
     
     pipe=Pipeline([("scale",StandardScaler()),("clf",tree_classifier)])
 
-    search=GridSearchCV(estimator=pipe,scoring=score_string,param_grid=param_grid_tree,cv=cv_inner,refit=True).fit(x,y)
+    search=GridSearchCV(estimator=pipe,scoring="roc_auc",param_grid=param_grid_tree,cv=5,refit=True).fit(x,y)
 
     # scores= cross_val_score(search, x_df, y, scoring=score_string, cv=cv_outer, n_jobs=-1)
 
