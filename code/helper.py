@@ -1,60 +1,64 @@
 #%%
-import numpy as np
-# %matplotlib inline
-import matplotlib.pyplot as plt 
-from matplotlib.pyplot import imshow
-from matplotlib.lines import Line2D
-import argparse
+imports=True
+if imports:
+    import numpy as np
+    # %matplotlib inline
+    import matplotlib.pyplot as plt 
+    from matplotlib.pyplot import imshow
+    from matplotlib.lines import Line2D
+    import argparse
 
-from sklearn.ensemble import RandomForestRegressor
-from sklearn import decomposition, linear_model,metrics
-from sklearn.base import BaseEstimator,ClassifierMixin
-from sklearn.decomposition import KernelPCA
-from sklearn.svm import SVC
-from sklearn.preprocessing import StandardScaler, LabelEncoder,FunctionTransformer
-class_labels = LabelEncoder()
-from sklearn.model_selection import cross_val_score,GridSearchCV,StratifiedKFold,KFold,train_test_split,LeaveOneOut
-from sklearn.pipeline import Pipeline, make_pipeline
-from sklearn.metrics import classification_report, confusion_matrix,mean_squared_error,r2_score
-from sklearn.metrics import auc, RocCurveDisplay, roc_curve, f1_score,roc_auc_score,mutual_info_score
-from sklearn.ensemble import RandomForestClassifier,AdaBoostClassifier,VotingClassifier
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.linear_model import LinearRegression, LogisticRegression
-from sklearn.feature_selection import RFE, SelectKBest, f_classif, chi2, mutual_info_classif
-from sklearn.manifold import TSNE, MDS
-from sklearn.naive_bayes import GaussianNB
-from sklearn.experimental import enable_iterative_imputer
-from sklearn.impute import IterativeImputer
-from sklearn.impute import SimpleImputer,KNNImputer
-from sklearn.compose import ColumnTransformer
-from sklearn.cross_decomposition import CCA
-from sklearn.feature_selection import SequentialFeatureSelector
-from sklearn.cluster import KMeans
-from sklearn.metrics.pairwise import pairwise_distances_argmin
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn import decomposition, linear_model,metrics
+    from sklearn.base import BaseEstimator,ClassifierMixin
+    from sklearn.decomposition import KernelPCA
+    from sklearn.svm import SVC
+    from sklearn.preprocessing import StandardScaler, LabelEncoder,FunctionTransformer
+    class_labels = LabelEncoder()
+    from sklearn.model_selection import cross_val_score,GridSearchCV,StratifiedKFold,KFold,train_test_split,LeaveOneOut
+    from sklearn.pipeline import Pipeline, make_pipeline
+    from sklearn.metrics import classification_report, confusion_matrix,mean_squared_error,r2_score
+    from sklearn.metrics import auc, RocCurveDisplay, roc_curve, f1_score,roc_auc_score,mutual_info_score
+    from sklearn.ensemble import RandomForestClassifier,AdaBoostClassifier,VotingClassifier
+    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+    from sklearn.linear_model import LinearRegression, LogisticRegression
+    from sklearn.feature_selection import RFE, SelectKBest, f_classif, chi2, mutual_info_classif
+    from sklearn.manifold import TSNE, MDS
+    from sklearn.naive_bayes import GaussianNB
+    from sklearn.experimental import enable_iterative_imputer
+    from sklearn.impute import IterativeImputer
+    from sklearn.impute import SimpleImputer,KNNImputer
+    from sklearn.compose import ColumnTransformer
+    from sklearn.cross_decomposition import CCA
+    from sklearn.feature_selection import SequentialFeatureSelector
+    from sklearn.cluster import KMeans
+    from sklearn.metrics.pairwise import pairwise_distances_argmin
 
-from astropy.stats import jackknife_resampling, jackknife_stats, binom_conf_interval
-from tqdm import tqdm
-import math
-from itertools import product
-from contextlib import redirect_stdout
-import pandas as pd
-import time
-import scipy
-from scipy import io, stats
-from scipy.stats.stats import pearsonr
-from statistics import mean
-from extra.MMIDimReduction import MMINet
-from cluster.selfrepresentation import ElasticNetSubspaceClustering, SparseSubspaceClusteringOMP
-from cca_zoo.models import GCCA, KGCCA
-# from extra.gcca import GCCA
+    from astropy.stats import jackknife_resampling, jackknife_stats, binom_conf_interval
+    from tqdm import tqdm
+    import math
+    from itertools import product
+    from contextlib import redirect_stdout
+    import pandas as pd
+    import time
+    import scipy
+    from scipy import io, stats
+    from scipy.stats.stats import pearsonr
+    from statistics import mean
+    from extra.MMIDimReduction import MMINet
+    from cluster.selfrepresentation import ElasticNetSubspaceClustering, SparseSubspaceClusteringOMP
+    from cca_zoo.models import GCCA, KGCCA
+    # from extra.gcca import GCCA
+    import json
 
-seed_value= 42
-import os
-os.environ['PYTHONHASHSEED']=str(seed_value)
-import random
-random.seed(seed_value)
-np.random.seed(seed_value)
-
+    seed_value= 42
+    import os
+    os.environ['PYTHONHASHSEED']=str(seed_value)
+    import random
+    random.seed(seed_value)
+    np.random.seed(seed_value)
+    import warnings 
+    warnings.filterwarnings("ignore")
 
 #%%
 def remove_non_features(column_list):
@@ -110,13 +114,13 @@ def nb_svm(x,y):
 
     svm_classifier = Pipeline([("pca",KernelPCA()), ("svm",SVC(probability=True))])
     # param_grid_svm={"clf__pca__n_components":[2,3,5,None],"clf__pca__gamma":[.01,.1],
-    param_grid_svm={"clf__pca__n_components":[3],"clf__pca__gamma":[.01,.1],"clf__pca__kernel":["linear","rbf"]}
+    param_grid_svm={"clf__pca__n_components":[2,3,5,None],"clf__pca__gamma":[.01,.1],"clf__pca__kernel":["linear","rbf"]}
 
     # "clf__svm__C": [1, 10, 100], "clf__svm__gamma": [.01, .1]
     
     pipe=Pipeline([("scale",StandardScaler()),("clf",svm_classifier)])
 
-    search=GridSearchCV(estimator=pipe,scoring="roc_auc",param_grid=param_grid_svm,cv=5,refit=True).fit(x,y)
+    search=GridSearchCV(estimator=pipe,scoring="roc_auc",param_grid=param_grid_svm,cv=5,refit=True,shuffle=True).fit(x,y)
 
     return search
 
@@ -125,22 +129,23 @@ def nb_tree(x,y):
 
     tree_classifier= Pipeline([("kbest",SelectKBest(f_classif)), ("tree",AdaBoostClassifier())])
     param_grid_tree={"clf__kbest__k":[2,3,5,7,10],"clf__tree__n_estimators":[50]}
+    # param_grid_tree={"clf__kbest__k":[2,3,5,7,10,'all'],"clf__tree__n_estimators":[50]}
     
     pipe=Pipeline([("scale",StandardScaler()),("clf",tree_classifier)])
 
     search=GridSearchCV(estimator=pipe,scoring="roc_auc",param_grid=param_grid_tree,cv=5,refit=True).fit(x,y)
-
     # scores= cross_val_score(search, x_df, y, scoring=score_string, cv=cv_outer, n_jobs=-1)
 
     return search
 
 def naive_bayes_multimodal(fmri_class,X_fmri,dwi_class,X_dwi,y_test,y_train,eeg_class=np.nan,X_eeg=np.nan):
     '''Makes a prediction based on a naive bayes multimodal fusion using a conditional independence assumption, which ignores modalities that don't have features for a given subject'''
-    p_true=sum(y_test)/len(y_test)
-    # p_true=sum(y_train)/len(y_train)
+    # p_true=sum(y_test)/len(y_test)
+    p_true=sum(y_train)/len(y_train)
     p_false=1-p_true
 
     n_subs=X_fmri.shape[0]
+    # n_subs=48
     #The following two variable will not actually be probabilities (they shouldn't sum to 1). Essentially this function uses the approximation 
     # p(x|l) \approx p(l|x)/p(l). To get a real generative model, I'd suggest just using a MLE for a gaussian model for the fMRI and dwi, and a poisson model for EEG
     y_prob_false=[]
@@ -154,6 +159,8 @@ def naive_bayes_multimodal(fmri_class,X_fmri,dwi_class,X_dwi,y_test,y_train,eeg_
         else: 
             fmri_prob_false=fmri_class.predict_proba(X_fmri[row,:].reshape(1, -1))[0][0]/p_false 
             fmri_prob_true=fmri_class.predict_proba(X_fmri[row,:].reshape(1, -1))[0][1]/p_true
+            # print('fmri',fmri_class.named_steps['f_classif'].get_support())
+            # print(fmri_class.best_estimator_.named_steps['kbest'].get_support())
 
         if np.isnan(X_dwi[row,:]).any():
             dwi_prob_true=1
@@ -161,6 +168,9 @@ def naive_bayes_multimodal(fmri_class,X_fmri,dwi_class,X_dwi,y_test,y_train,eeg_
         else: 
             dwi_prob_false=dwi_class.predict_proba(X_dwi[row,:].reshape(1, -1))[0][0]/p_false
             dwi_prob_true=dwi_class.predict_proba(X_dwi[row,:].reshape(1, -1))[0][1]/p_true
+            # print('dmri',dwi_class.named_steps['f_classif'].get_support())
+            # print(dwi_class.best_estimator_.named_steps['kbest'].get_support())
+
 
         # if np.isnan(X_eeg):
         #     eeg_prob_true=1
@@ -171,6 +181,8 @@ def naive_bayes_multimodal(fmri_class,X_fmri,dwi_class,X_dwi,y_test,y_train,eeg_
         else: 
             eeg_prob_false=eeg_class.predict_proba(X_eeg[row,:].reshape(1, -1))[0][0]/p_false
             eeg_prob_true=eeg_class.predict_proba(X_eeg[row,:].reshape(1, -1))[0][1]/p_true
+            # print('eeg',eeg_class.named_steps['f_classif'].get_support())
+            # print(eeg_class.best_estimator_.named_steps['kbest'].get_support())
         
         prob_false=fmri_prob_false*dwi_prob_false*eeg_prob_false*p_false
         y_prob_false.append(prob_false)
@@ -179,19 +191,6 @@ def naive_bayes_multimodal(fmri_class,X_fmri,dwi_class,X_dwi,y_test,y_train,eeg_
         predict.append(prob_true>=prob_false) #check which "probability" is higher. Could test whether taking the tie break the other direction (i.e. setting the prediciton to prob_true>=prob_false) changes the results
 
     return predict,y_prob_true,y_prob_false
-    
-def nb_cca_svm(x,y):
-    ''' Fits and scores a CCA+SVM classifier for use in a Bayes fusion classifier'''
-
-    svm_classifier = Pipeline([("svm",SVC(probability=True))])
-    param_grid_svm={"clf__svm__gamma": ['auto']}
-    # param_grid_svm={"clf__svm__C": [10], "clf__svm__gamma": [.01]}
-    
-    pipe=Pipeline([("scale",StandardScaler()),("clf",svm_classifier)])
-
-    search=GridSearchCV(estimator=pipe,scoring=score_string,param_grid=param_grid_svm,cv=cv_inner,refit=True).fit(x,y)
-
-    return search
 
 def load_data(processed_data_path,NBF=False):
     fmri_features=pd.read_csv(f"{processed_data_path}/fMRI/fMRI_features_AAL.csv",index_col=0)
@@ -276,6 +275,7 @@ def load_data(processed_data_path,NBF=False):
     select_all=ColumnTransformer([("ALL",'passthrough',[*mean_str_pos_columns,*mean_str_neg_columns,*overlap_columns,*eeg_columns,*dwi_columns])])
     X_df=all_features_df
     X_df=X_df.drop(["ID","Subject","Subject Number"],axis=1)
+    # X_df.to_csv('X_df.csv')
     # X_df=X_df[:].values
     X_df=X_df.to_numpy()
 

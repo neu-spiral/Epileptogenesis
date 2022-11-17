@@ -1,13 +1,12 @@
 from helper import *
 
 def run_estimator(cv_outer,output_path,model,X_df,y,text,options,
-                    imputer='KNN',neighbors=3,roc_flag='False',fixed_feat=0,direction='forward'):
+                    imputer='KNN',neighbors=3,roc_flag='False',fixed_feat=0,rho=1,direction='backward'):
     fmri_feat_outer=['Pos']
     # fmri_feat=['Neg','Pos','Ov']
     fmri_feat=['Ov']
-    l=1
-    j=2
-    results,roc_data,y_info,x_feats=pd.DataFrame(),pd.DataFrame(),pd.DataFrame(),pd.DataFrame()
+    l,j=1,2
+    results,roc_data,y_info,x_feats,grid_search=pd.DataFrame(),pd.DataFrame(),pd.DataFrame(),pd.DataFrame(),pd.DataFrame()
     print('Model:',model,', Imputer:',imputer,', Neighbors:',neighbors)
 
     for key_2 in fmri_feat_outer:
@@ -22,8 +21,9 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,options,
 
             # Varying no. of features
             # for i in tqdm(range(10)):
+            # for i in tqdm([0.15,0.3,0.5,0.7,0.85,1]):
             for i in tqdm([4]):
-                f1_scores,sensitivity1,specificity1,tprs,aucs = [],[],[],[],[]
+                f1_scores,sensitivity1,specificity1,tprs,aucs,feat_sel = [],[],[],[],[],[]
                 # y_pred_all,y_test_all=[],[]
                 fig, ax = plt.subplots()
                 mean_fpr = np.linspace(0, 1, 100)
@@ -36,7 +36,8 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,options,
                     X_test_raw = X_df[test_idx]
                     
                     if model=='NBF':
-                        processed_data_path="/home/navid/Dropbox/Repo_2022/Epilep/Epileptogenesis/_data/processed"
+                        # processed_data_path="/home/navid/Dropbox/Repo_2022/Epilep/Epileptogenesis/_data/processed"
+                        processed_data_path="/Users/Navid1/Dropbox/Repo_2022/Epilep/Epileptogenesis/_data/processed" # mac
                         x_d,x_e,x_fn,x_fp,x_fo,y=load_data(processed_data_path,NBF=True)
 
                         X_train_dwi,y_train_dwi=drop_nan_index(x_d,y,train_idx)
@@ -55,19 +56,30 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,options,
                             X_test_fmri=x_fo[test_idx,:]
 
                         # SVM Classifiers
-                        fmri_class=nb_svm(X_train_fmri,y_train_fmri)
-                        dwi_class=nb_svm(X_train_dwi,y_train_dwi)
-                        eeg_class=nb_svm(X_train_eeg,y_train_eeg)
-                        # fmri_class=nb_tree(X_train_fmri,y_train_fmri)
-                        # dwi_class=nb_tree(X_train_dwi,y_train_dwi)
-                        # eeg_class=nb_tree(X_train_eeg,y_train_eeg)
+                        # fmri_class=nb_svm(X_train_fmri,y_train_fmri)
+                        # dwi_class=nb_svm(X_train_dwi,y_train_dwi)
+                        # eeg_class=nb_svm(X_train_eeg,y_train_eeg)
+                        fmri_class=nb_tree(X_train_fmri,y_train_fmri)
+                        dwi_class=nb_tree(X_train_dwi,y_train_dwi)
+                        eeg_class=nb_tree(X_train_eeg,y_train_eeg)
 
-                        fmri_grid = pd.DataFrame(fmri_class.cv_results_)
+                        # feat_sel.append(dwi_class.best_estimator_.named_steps['clf']['kbest'].get_support())
+                        # feat_sel.append(eeg_class.best_estimator_.named_steps['clf']['kbest'].get_support())
+                        # feat_sel.append(fmri_class.best_estimator_.named_steps['clf']['kbest'].get_support())
+
+                        np.savetxt(f'{output_path}_feats/{text}_{str(k)}_dmri.txt',x_d[:,dwi_class.best_estimator_.named_steps['clf']['kbest'].get_support()], fmt='%f')
+                        np.savetxt(f'{output_path}_feats/{text}_{str(k)}_fmri.txt',x_fo[:,fmri_class.best_estimator_.named_steps['clf']['kbest'].get_support()], fmt='%f')
+
+                        # print(dwi_class.best_estimator_.named_steps['clf']['kbest'].get_support())
+                        # print(eeg_class.best_estimator_.named_steps['clf']['kbest'].get_support())
+                        # print(fmri_class.best_estimator_.named_steps['clf'].get_support())
+
                         dwi_grid = pd.DataFrame(dwi_class.cv_results_)
                         eeg_grid = pd.DataFrame(eeg_class.cv_results_)
-                        grid_search = fmri_grid.append(dwi_grid)
-                        grid_search = grid_search.append(eeg_grid)
-                        grid_search.to_csv(output_path+'_stat/'+'grid_search_nbf_svm.csv')
+                        fmri_grid = pd.DataFrame(fmri_class.cv_results_)
+                        grid_search=grid_search.append(dwi_grid)
+                        grid_search=grid_search.append(eeg_grid)
+                        grid_search=grid_search.append(fmri_grid)
 
                         y_pred,y_proba,y_prob_false=naive_bayes_multimodal(fmri_class,X_test_fmri,dwi_class,X_test_dwi,y_test,y_train,eeg_class,X_test_eeg)
                         roc_auc=roc_auc_score(y_test, y_proba)
@@ -78,12 +90,12 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,options,
                         X_train_2,X_test_2=impute_data(imputer,X_train_raw,X_test_raw,fmri_key=l, neighbors=neighbors)
 
                         # Fit and test with desired classifier
-                        y_pred,fpr,tpr,roc_auc,X_test_model=model_run(model,i,k,ax,X_train,X_test,X_train_2,X_test_2,y_train,y_test,roc_flag,direction,fixed_feat)
+                        y_pred,fpr,tpr,roc_auc,X_test_model=model_run(model,i,k,ax,X_train,X_test,X_train_2,X_test_2,y_train,y_test,roc_flag,direction,fixed_feat,rho)
                         # y_pred,fpr,tpr,roc_auc,X_test_model,y_proba=model_run(model,i,k,ax,X_train,X_test,X_train_2,X_test_2,y_train,y_test,roc_flag,direction,fixed_feat)
-                        # print('len',len(y_pred))
-                        # print('size',y_pred.size)
-                        for m in range(len(y_pred)):
-                            x_feats=x_feats.append({'X_test_model':X_test_model[m]},ignore_index=True)
+                        
+                        np.savetxt(f'{output_path}_feats/cca+sfs/{text}_{str(k)}.txt',X_test_model, fmt='%f')
+                        # for m in range(len(y_pred)):
+                        #     x_feats=x_feats.append({'X_test_model':X_test_model[m]},ignore_index=True)
                             # y_info=y_info.append({'y_test':y_test[m]*1,'y_pred':y_pred[m]*1,
                             # 'y_proba':y_proba[m,1]},ignore_index=True)                            
                         if options=='X_test':
@@ -118,11 +130,17 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,options,
                     plot_manifold(output_path,model,X_model,y_model,text,options,imputer,neighbors,fixed_feat)               
 
                 # Record all results 
-                results = results.append({'fMRI_out':key_2,'fMRI_in':key,'Feats_fix':fixed_feat,'Feats_var':i+1,
-                'Imputer':imputer,'Neighbors':neighbors,'AUC: Mean':round(mean(aucs),3),
-                'f1: Mean':round(mean(f1_scores),3),'Sensitivity':round(mean(sensitivity1),3),
-                'Specificity':round(mean(specificity1),3)},ignore_index=True)
+                results = results.append({'fMRI_out':key_2,'fMRI_in':key,'Feats_fix':fixed_feat,
+                'Feats_var':i+1,'rho':rho,'AUC: Mean':round(mean(aucs),3),'AUC: SEM ':round(1.96*stats.sem(aucs,ddof=0),3),
+                'f1: Mean':round(mean(f1_scores),3),'f1: SEM ':round(1.96*stats.sem(f1_scores,ddof=0),3)},ignore_index=True)
+                # 'Sensitivity':round(mean(sensitivity1),3),
+                # 'Specificity':round(mean(specificity1),3)},ignore_index=True)
                 # ,'f1: Mean':round(mean(f1_scores),3),'SEM f1':round(1.96*stats.sem(f1_scores,ddof=0),3)
+
+                # np.savetxt(f'{output_path}_stat/{text}_feat_sel.txt',feat_sel, fmt='%s')
+                # grid_search.to_csv(f'{output_path}_stat/{text}_grid_nbf_adb_stat.csv')
+                # with open(f'{output_path}_stat/feat_sel.txt', 'w') as filehandle:
+                #     json.dump(list(feat_sel), filehandle)
 
                 if roc_flag=='False':
                     plt.close()
@@ -147,7 +165,7 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,options,
         if options=='roc_data':
             for m in range(mean_fpr.size):
                 roc_data = roc_data.append({'mean_fpr':mean_fpr[m],'mean_tpr':mean_tpr[m]},ignore_index=True)
-            x_feats.to_csv(output_path+'extra/'+model+'_'+key+'_'+imputer+'_'+str(neighbors)+'_fixed_'+str(fixed_feat)+text+'_x_feats.csv',index=False)
+            # x_feats.to_csv(output_path+'extra/'+model+'_'+key+'_'+imputer+'_'+str(neighbors)+'_fixed_'+str(fixed_feat)+text+'_x_feats.csv',index=False)
             roc_data.to_csv(output_path+'extra/'+model+'_'+key+'_'+imputer+'_'+str(neighbors)+'_fixed_'+str(fixed_feat)+text+'_roc_pts.csv')
 
         elif options=='y_info':
@@ -179,15 +197,16 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,options,
         plt.savefig(output_path+'_plot/'+model+'_'+key+'_'+imputer+'_'+str(neighbors)+'_fixed_'+str(fixed_feat)+text+'.png') 
     
     # Export all results to csv
-    results.to_csv(output_path+'_stat/'+model+'_'+key+'_'+imputer+'_'+str(neighbors)+'_fixed_'+str(fixed_feat)+text+'.csv')
+    results.to_csv(output_path+'_stat/'+model+'_'+key+'_'+str(rho)+'_fixed_'+str(fixed_feat)+text+'.csv')
 
 def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,X_train_2,X_test_2,
-                y_train,y_test,roc_flag,direction,fixed_feat):
+                y_train,y_test,roc_flag,direction,fixed_feat,rho=1):
     # SVM Classifier
     clf=None
-    clf=make_pipeline(StandardScaler(), AdaBoostClassifier(n_estimators=50))
-    # clf=make_pipeline(StandardScaler(), SVC(gamma='auto',probability=True))
-    # clf=make_pipeline(StandardScaler(), SVC(gamma='auto'))
+    # clf=make_pipeline(StandardScaler(), SVC(gamma='scale',probability=True))
+
+    # clf=make_pipeline(StandardScaler(), AdaBoostClassifier(n_estimators=50))
+    clf=make_pipeline(StandardScaler(), SVC(gamma='auto'))
 
     if model=='SFS':
         sfs=None
@@ -196,23 +215,78 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,X_train_2,X_test_2,
         X_test=sfs.transform(X_test_imputed)
 
         # # removing features above a certain mutual correlation coefficient
-        # keep_col=[]
-        # for j in range(X_train.shape[1]):
-        #     keep_col.append(j)
-        #     if j==0:
-        #         continue
-        #     else:
-        #         for m in range(j):
-        #             r_coef=pearsonr(X_train[:,m],X_train[:,j])[0]
-        #             if r_coef>=0.5:
-        #                 keep_col.remove(j)
-        #                 break
+        keep_col=[]
+        for j in range(X_train.shape[1]):
+            keep_col.append(j)
+            if j==0:
+                continue
+            else:
+                for m in range(j):
+                    r_coef=pearsonr(X_train[:,m],X_train[:,j])[0]
+                    if r_coef>=rho:
+                        keep_col.remove(j)
+                        break
 
-        # X_train=X_train[:,keep_col]
-        # X_test=X_test[:,keep_col]
-        # print('feat=',i+1,'keep_col=',len(keep_col))
+        X_train=X_train[:,keep_col]
+        X_test=X_test[:,keep_col]
+        print('feat=',fixed_feat,'keep_col=',len(keep_col))
 
     elif model=='SMIG':
+        smig=None
+        smig=MMINet(input_dim=232, output_dim=fixed_feat, net='linear')
+        smig.learn(X_train_imputed, y_train, num_epochs=10)
+        X_train_smig = smig.reduce(X_train_imputed)
+        X_test_smig = smig.reduce(X_test_imputed)
+
+        # removing features above a certain mutual correlation coefficient
+        keep_col=[]
+        for j in range(X_train_smig.shape[1]):
+            keep_col.append(j)
+            if j==0:
+                continue
+            else:
+                for m in range(j):
+                    r_coef=pearsonr(X_train_smig[:,m],X_train_smig[:,j])[0]
+                    if r_coef>=i:
+                        keep_col.remove(j)
+                        break
+
+        X_train=X_train_smig[:,keep_col]
+        X_test=X_test_smig[:,keep_col]
+        print('feat=',fixed_feat,'keep_col=',len(keep_col))
+
+    elif model=='CCA':
+        cca=None
+        cca=CCA(n_components=i+1)
+        # X_train_f,X_train_d=cca.fit_transform(X_train_imputed[:,0:166],X_train_imputed[:,166:229])
+        X_train_f,X_train_d=cca.fit_transform(X_train_imputed[:,229:232],X_train_imputed[:,0:166])
+        X_train=np.concatenate((X_train_f,X_train_d), axis=1)
+        # X_test_f,X_test_d=cca.transform(X_test_imputed[:,0:166],X_test_imputed[:,166:229])
+        X_test_f,X_test_d=cca.transform(X_test_imputed[:,229:232],X_test_imputed[:,0:166])
+        X_test=np.concatenate((X_test_f,X_test_d), axis=1)
+
+    elif model=='GCCA':
+        gcca=None
+        gcca=GCCA(latent_dims=i+1)
+        # gcca.fit(X_train_imputed[:,0:166],X_train_imputed[:,166:229],X_train_imputed[:,229:232])
+        X_train_f,X_train_d,X_train_e=gcca.fit_transform((X_train_imputed[:,0:166],X_train_imputed[:,166:229],X_train_imputed[:,229:232]))
+        X_train=np.concatenate((X_train_f,X_train_d), axis=1)
+        X_train=np.concatenate((X_train,X_train_e), axis=1)
+        X_test_f,X_test_d,X_test_e=gcca.transform((X_test_imputed[:,0:166],X_test_imputed[:,166:229],X_test_imputed[:,229:232]))
+        X_test=np.concatenate((X_test_f,X_test_d), axis=1)
+        X_test=np.concatenate((X_test,X_test_e), axis=1)
+
+    elif model=='GCCA+SMIG':
+        # Fix feats in one model, sweep feats in other
+        gcca=None
+        gcca=GCCA(latent_dims=fixed_feat)
+        X_train_f,X_train_d,X_train_e=gcca.fit_transform((X_train_2[:,0:166],X_train_2[:,166:229],X_train_2[:,229:232]))
+        X_train_gcca=np.concatenate((X_train_f,X_train_d), axis=1)
+        X_train_gcca=np.concatenate((X_train_gcca,X_train_e), axis=1)
+        X_test_f,X_test_d,X_test_e=gcca.transform((X_test_2[:,0:166],X_test_2[:,166:229],X_test_2[:,229:232]))
+        X_test_gcca=np.concatenate((X_test_f,X_test_d), axis=1)
+        X_test_gcca=np.concatenate((X_test_gcca,X_test_e), axis=1)
+
         smig=None
         smig=MMINet(input_dim=232, output_dim=i+1, net='linear')
         smig.learn(X_train_imputed, y_train, num_epochs=10)
@@ -232,45 +306,47 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,X_train_2,X_test_2,
                         keep_col.remove(j)
                         break
 
-        X_train=X_train_smig[:,keep_col]
-        X_test=X_test_smig[:,keep_col]
+        X_train_smig=X_train_smig[:,keep_col]
+        X_test_smig=X_test_smig[:,keep_col]
         print('feat=',i+1,'keep_col=',len(keep_col))
 
-    elif model=='CCA':
-        cca=None
-        cca=CCA(n_components=i+1)
-        X_train_f,X_train_d=cca.fit_transform(X_train_imputed[:,0:166],X_train_imputed[:,166:229])
-        X_train=np.concatenate((X_train_f,X_train_d), axis=1)
-        X_test_f,X_test_d=cca.transform(X_test_imputed[:,0:166],X_test_imputed[:,166:229])
-        X_test=np.concatenate((X_test_f,X_test_d), axis=1)
+        X_train=np.concatenate((X_train_gcca,X_train_smig), axis=1)
+        X_test=np.concatenate((X_test_gcca,X_test_smig), axis=1)
+
+    elif model=='GCCA+SFS':
+        # Fix feats in one model, sweep feats in other
+        gcca=None
+        gcca=GCCA(latent_dims=fixed_feat)
+        X_train_f,X_train_d,X_train_e=gcca.fit_transform((X_train_2[:,0:166],X_train_2[:,166:229],X_train_2[:,229:232]))
+        X_train_gcca=np.concatenate((X_train_f,X_train_d), axis=1)
+        X_train_gcca=np.concatenate((X_train_gcca,X_train_e), axis=1)
+        X_test_f,X_test_d,X_test_e=gcca.transform((X_test_2[:,0:166],X_test_2[:,166:229],X_test_2[:,229:232]))
+        X_test_gcca=np.concatenate((X_test_f,X_test_d), axis=1)
+        X_test_gcca=np.concatenate((X_test_gcca,X_test_e), axis=1)
+        sfs=None
+        sfs=SequentialFeatureSelector(clf, direction=direction, scoring='roc_auc', n_features_to_select=i+1)
+        X_train_sfs=sfs.fit_transform(X_train_imputed,y_train)
+        X_test_sfs=sfs.transform(X_test_imputed)
 
         # removing features above a certain mutual correlation coefficient
         keep_col=[]
-        for j in range(X_train.shape[1]):
+        for j in range(X_train_sfs.shape[1]):
             keep_col.append(j)
             if j==0:
                 continue
             else:
                 for m in range(j):
-                    r_coef=pearsonr(X_train[:,m],X_train[:,j])[0]
+                    r_coef=pearsonr(X_train_sfs[:,m],X_train_sfs[:,j])[0]
                     if r_coef>=0.5:
                         keep_col.remove(j)
                         break
 
-        X_train=X_train[:,keep_col]
-        X_test=X_test[:,keep_col]
+        X_train_sfs=X_train_sfs[:,keep_col]
+        X_test_sfs=X_test_sfs[:,keep_col]
         print('feat=',i+1,'keep_col=',len(keep_col))
 
-    elif model=='GCCA':
-        gcca=None
-        gcca=GCCA(latent_dims=i+1)
-        # gcca.fit(X_train_imputed[:,0:166],X_train_imputed[:,166:229],X_train_imputed[:,229:232])
-        X_train_f,X_train_d,X_train_e=gcca.fit_transform((X_train_imputed[:,0:166],X_train_imputed[:,166:229],X_train_imputed[:,229:232]))
-        X_train=np.concatenate((X_train_f,X_train_d), axis=1)
-        X_train=np.concatenate((X_train,X_train_e), axis=1)
-        X_test_f,X_test_d,X_test_e=gcca.transform((X_test_imputed[:,0:166],X_test_imputed[:,166:229],X_test_imputed[:,229:232]))
-        X_test=np.concatenate((X_test_f,X_test_d), axis=1)
-        X_test=np.concatenate((X_test,X_test_e), axis=1)
+        X_train=np.concatenate((X_train_gcca,X_train_sfs), axis=1)
+        X_test=np.concatenate((X_test_gcca,X_test_sfs), axis=1)
 
     elif model=='KGCCA':
         kgcca=None
@@ -288,8 +364,10 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,X_train_2,X_test_2,
         cca=None
         cca=CCA(n_components=fixed_feat)
         X_train_f,X_train_d=cca.fit_transform(X_train_2[:,0:166],X_train_2[:,166:229])
+        # X_train_f,X_train_d=cca.fit_transform(X_train_2[:,0:166],X_train_2[:,229:232])
         X_train_cca=np.concatenate((X_train_f,X_train_d), axis=1)
         X_test_f,X_test_d=cca.transform(X_test_2[:,0:166],X_test_2[:,166:229])
+        # X_test_f,X_test_d=cca.transform(X_test_2[:,0:166],X_test_2[:,229:232])
         X_test_cca=np.concatenate((X_test_f,X_test_d), axis=1)
         sfs=None
         sfs=SequentialFeatureSelector(clf, direction=direction, scoring='roc_auc', n_features_to_select=i+1)
@@ -300,12 +378,10 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,X_train_2,X_test_2,
         keep_col=[]
         for j in range(X_train_sfs.shape[1]):
             keep_col.append(j)
-            if j==0:
-                continue
-            else:
+            if j>0:
                 for m in range(j):
                     r_coef=pearsonr(X_train_sfs[:,m],X_train_sfs[:,j])[0]
-                    if r_coef>=0.5:
+                    if r_coef>=rho:
                         keep_col.remove(j)
                         break
 
@@ -384,7 +460,7 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,X_train_2,X_test_2,
     )
 
     if model=='CCA+SFS':
-        return y_pred,viz.fpr,viz.tpr,viz.roc_auc,X_test_sfs
+        return y_pred,viz.fpr,viz.tpr,viz.roc_auc,X_train_sfs
     else:
         return y_pred,viz.fpr,viz.tpr,viz.roc_auc,X_test
         # return y_pred,viz.fpr,viz.tpr,viz.roc_auc,X_test,y_proba
