@@ -18,9 +18,6 @@ Please install all necessary library versions by typing in terminal:
 |      |--multimodal_RA.ipynb
 |      
 |--<_data>
-|      |--<input_1>.nii.gz      
-|      |--<input_2>.nii.gz      
-|      |--<output>.nii.gz
 ```
 
 ## Repo Usage
