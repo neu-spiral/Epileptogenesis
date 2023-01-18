@@ -1,10 +1,15 @@
 # Unimodal and Multimodal Classification of Epileptic Seizures
 
 ## Project Summary
+Raw Data Samples: 
+
 <img src=https://user-images.githubusercontent.com/38365057/213297916-258904c4-6b5f-4fa4-bb6b-a790cd61447a.png width="400">
+
+Multimodal Pipeline: 
+
 <img src=https://user-images.githubusercontent.com/38365057/213297928-0540da3e-4a37-460b-aebe-04bc29553773.png width="400">
 
-Please take a look at our papers below:
+Please take a look at our papers below for details:
 1. [Multimodal (dMRI, EEG, fMRI: 2022)](https://www.medrxiv.org/content/10.1101/2022.10.22.22281402.abstract)
 
 Cite: 
