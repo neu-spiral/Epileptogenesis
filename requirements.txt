@@ -1,5 +1,11 @@
+# cca_zoo==1.16.19
+# python==3.7.9
 scikit-learn==1.0.2
-numpy==1.21.2
+numpy==1.18.5
 pandas==1.3.4
-matplotlib==3.5.1
-scipy==1.7.3
+matplotlib==3.5.3
+scipy==1.4.1
+astropy==4.0.2
+chainer==7.8.1
+progressbar==2.5
+shap==0.41.0

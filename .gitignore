@@ -17,6 +17,8 @@ notebooks
 .DS_Store
 *.csv
 *.xlsx
+check.py
+.vscode
 
 *.rsuser
 *.suo

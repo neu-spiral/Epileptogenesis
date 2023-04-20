@@ -36,8 +36,8 @@ def run_estimator(cv_outer,output_path,model,X_df,y,text,options,
                     X_test_raw = X_df[test_idx]
                     
                     if model=='NBF':
-                        # processed_data_path="/home/navid/Dropbox/Repo_2022/Epilep/Epileptogenesis/_data/processed"
-                        processed_data_path="/Users/Navid1/Dropbox/Repo_2022/Epilep/Epileptogenesis/_data/processed" # mac
+                        processed_data_path="/home/navid/Dropbox/Repo_2023/Epilep/Epileptogenesis/_data/processed"
+                        # processed_data_path="/Users/Navid1/Dropbox/Repo_2023/Epilep/Epileptogenesis/_data/processed" # mac
                         x_d,x_e,x_fn,x_fp,x_fo,y=load_data(processed_data_path,NBF=True)
 
                         X_train_dwi,y_train_dwi=drop_nan_index(x_d,y,train_idx)
@@ -206,7 +206,7 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,X_train_2,X_test_2,
     # clf=make_pipeline(StandardScaler(), SVC(gamma='scale',probability=True))
 
     # clf=make_pipeline(StandardScaler(), AdaBoostClassifier(n_estimators=50))
-    clf=make_pipeline(StandardScaler(), SVC(gamma='auto'))
+    clf=make_pipeline(StandardScaler(), SVC(gamma='auto',probability=True))
 
     if model=='SFS':
         sfs=None
@@ -391,7 +391,7 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,X_train_2,X_test_2,
 
         X_train=np.concatenate((X_train_cca,X_train_sfs), axis=1)
         X_test=np.concatenate((X_test_cca,X_test_sfs), axis=1)
-
+#%%
         # # removing features above a certain mutual correlation coefficient
         # keep_col=[]
         # for j in range(X_train.shape[1]):
@@ -409,7 +409,7 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,X_train_2,X_test_2,
         # X_train=X_train[:,keep_col]
         # X_test=X_test[:,keep_col]
         # print('feats=',i+1+2*fixed_feat,'keep_col=',len(keep_col))
-
+#%%
     elif model=='CCA+SMIG':
         # Fix feats in one model, sweep feats in other
         cca=None
@@ -445,6 +445,11 @@ def model_run(model,i,k,ax,X_train_imputed,X_test_imputed,X_train_2,X_test_2,
         X_test=np.concatenate((X_test_cca,X_test_smig), axis=1)
 
     clf.fit(X_train,y_train)
+    f = lambda x: clf.predict_proba(x)[:,1]
+    med = np.median(X_train, axis=0).reshape(1, -1)
+    explainer = shap.Explainer(f, med)
+    shap_values = explainer.shap_values(X_test)
+    shap.plots.beeswarm(shap_values)
     y_pred=clf.predict(X_test)
     # y_proba=clf.predict_proba(X_test)
 
@@ -515,3 +520,4 @@ def plot_manifold(output_path,model,X,y,text,options,
 
         plt.tight_layout()     
         plt.savefig(output_path+'_plot/'+model+'_'+key+'_'+imputer+'_'+str(neighbors)+'_fixed_'+str(fixed_feat)+text+'_manifold.png')     
+# %%

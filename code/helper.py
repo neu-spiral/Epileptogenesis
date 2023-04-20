@@ -1,4 +1,4 @@
-#%%
+#%% Imports
 imports=True
 if imports:
     import numpy as np
@@ -49,7 +49,8 @@ if imports:
     from cluster.selfrepresentation import ElasticNetSubspaceClustering, SparseSubspaceClusteringOMP
     from cca_zoo.models import GCCA, KGCCA
     # from extra.gcca import GCCA
-    import json
+    import json    
+    import shap
 
     seed_value= 42
     import os
@@ -277,14 +278,15 @@ def load_data(processed_data_path,NBF=False):
     X_df=X_df.drop(["ID","Subject","Subject Number"],axis=1)
     # X_df.to_csv('X_df.csv')
     # X_df=X_df[:].values
-    X_df=X_df.to_numpy()
+    X_data=X_df.to_numpy()
 
     if NBF:
         return X_dwi,X_eeg,X_neg_str_aal,X_pos_str_aal,X_over_aal,y
-    else:
-        return X_df,y
+    else: 
+        return X_df,X_data,y
 
-def impute_data(imputer,train_df,test_df,fmri_key,neighbors=3):
+def impute_data(imputer,train_df,test_df=None,fmri_key=3,neighbors=1):
+    
     iter_estimator=RandomForestRegressor(
         n_estimators=4,
         max_depth=10,
@@ -300,20 +302,36 @@ def impute_data(imputer,train_df,test_df,fmri_key,neighbors=3):
     # Select appropriate columns for chosen fmri strength
     # fmri_label=col_0, dmri_label=col_562, common_label=col_563, eeg_label=col_567
 
+    # Impute data for train
+    # convert to pandas dataframe
+
     x_fmri=train_df[:,1+((fmri_key-1)*166):1+(fmri_key*166)]
     x_dmri=train_df[:,499:562]
     x_eeg=train_df[:,564:567]
     train_df_f=np.append(x_fmri,x_dmri,axis=1)
     train_df_f=np.append(train_df_f,x_eeg,axis=1)
 
-    x_fmri=test_df[:,1+((fmri_key-1)*166):1+(fmri_key*166)]
-    x_dmri=test_df[:,499:562]
-    x_eeg=test_df[:,564:567]
-    test_df_f=np.append(x_fmri,x_dmri,axis=1)
-    test_df_f=np.append(test_df_f,x_eeg,axis=1)
+    # x_fmri=train_df.iloc[:,1+((fmri_key-1)*166):1+(fmri_key*166)]
+    # x_dmri=train_df.iloc[:,499:562]
+    # x_eeg=train_df.iloc[:,564:567]
+    # merged_df = x_fmri.join(x_dmri)
+    # train_df_f = merged_df.join(x_eeg)
+
+    # Impute data for test
+    if test_df is not None:
+        x_fmri=test_df[:,1+((fmri_key-1)*166):1+(fmri_key*166)]
+        x_dmri=test_df[:,499:562]
+        x_eeg=test_df[:,564:567]
+        test_df_f=np.append(x_fmri,x_dmri,axis=1)
+        test_df_f=np.append(test_df_f,x_eeg,axis=1)
     
     imputed_train=imputer_mode.fit_transform(train_df_f)
-    imputed_test=imputer_mode.transform(test_df_f)
+    if test_df is not None:
+        imputed_test=imputer_mode.transform(test_df_f)
+    # print(np.max(imputed_train))
+    # print(np.min(imputed_train))
 
-    return imputed_train,imputed_test
-    # return imputed_train
+    if test_df is not None:
+        return imputed_train,imputed_test
+    else:
+        return imputed_train
