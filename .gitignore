@@ -9,6 +9,7 @@ _stat
 _plot
 _check
 _feats
+_shap
 extra
 cluster
 metrics
@@ -365,3 +366,5 @@ MigrationBackup/
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
 code/multimodal_RA.ipynb
+code/train_test.py
+code/MMIDimReduction
