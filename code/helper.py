@@ -1,65 +1,63 @@
 #%% Imports
-imports=True
-if imports:
-    import numpy as np
-    # %matplotlib inline
-    import matplotlib.pyplot as plt 
-    from matplotlib.pyplot import imshow
-    from matplotlib.lines import Line2D
-    import argparse
+import numpy as np
+# %matplotlib inline
+import matplotlib.pyplot as plt 
+from matplotlib.pyplot import imshow
+from matplotlib.lines import Line2D
+import argparse
 
-    from sklearn.ensemble import RandomForestRegressor
-    from sklearn import decomposition, linear_model,metrics
-    from sklearn.base import BaseEstimator,ClassifierMixin
-    from sklearn.decomposition import KernelPCA
-    from sklearn.svm import SVC
-    from sklearn.preprocessing import StandardScaler, LabelEncoder,FunctionTransformer
-    class_labels = LabelEncoder()
-    from sklearn.model_selection import cross_val_score,GridSearchCV,StratifiedKFold,KFold,train_test_split,LeaveOneOut
-    from sklearn.pipeline import Pipeline, make_pipeline
-    from sklearn.metrics import classification_report, confusion_matrix,mean_squared_error,r2_score
-    from sklearn.metrics import auc, RocCurveDisplay, roc_curve, f1_score,roc_auc_score,mutual_info_score
-    from sklearn.ensemble import RandomForestClassifier,AdaBoostClassifier,VotingClassifier
-    from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-    from sklearn.linear_model import LinearRegression, LogisticRegression
-    from sklearn.feature_selection import RFE, SelectKBest, f_classif, chi2, mutual_info_classif
-    from sklearn.manifold import TSNE, MDS
-    from sklearn.naive_bayes import GaussianNB
-    from sklearn.experimental import enable_iterative_imputer
-    from sklearn.impute import IterativeImputer
-    from sklearn.impute import SimpleImputer,KNNImputer
-    from sklearn.compose import ColumnTransformer
-    from sklearn.cross_decomposition import CCA
-    from sklearn.feature_selection import SequentialFeatureSelector
-    from sklearn.cluster import KMeans
-    from sklearn.metrics.pairwise import pairwise_distances_argmin
+from sklearn.ensemble import RandomForestRegressor
+from sklearn import decomposition, linear_model,metrics
+from sklearn.base import BaseEstimator,ClassifierMixin
+from sklearn.decomposition import KernelPCA
+from sklearn.svm import SVC
+from sklearn.preprocessing import StandardScaler, LabelEncoder,FunctionTransformer
+class_labels = LabelEncoder()
+from sklearn.model_selection import cross_val_score,GridSearchCV,StratifiedKFold,KFold,train_test_split,LeaveOneOut
+from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.metrics import classification_report, confusion_matrix,mean_squared_error,r2_score
+from sklearn.metrics import auc, RocCurveDisplay, roc_curve, f1_score,roc_auc_score,mutual_info_score
+from sklearn.ensemble import RandomForestClassifier,AdaBoostClassifier,VotingClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.linear_model import LinearRegression, LogisticRegression
+from sklearn.feature_selection import RFE, SelectKBest, f_classif, chi2, mutual_info_classif
+from sklearn.manifold import TSNE, MDS
+from sklearn.naive_bayes import GaussianNB
+from sklearn.experimental import enable_iterative_imputer
+from sklearn.impute import IterativeImputer
+from sklearn.impute import SimpleImputer,KNNImputer
+from sklearn.compose import ColumnTransformer
+from sklearn.cross_decomposition import CCA
+from sklearn.feature_selection import SequentialFeatureSelector
+from sklearn.cluster import KMeans
+from sklearn.metrics.pairwise import pairwise_distances_argmin
 
-    from astropy.stats import jackknife_resampling, jackknife_stats, binom_conf_interval
-    from tqdm import tqdm
-    import math
-    from itertools import product
-    from contextlib import redirect_stdout
-    import pandas as pd
-    import time
-    import scipy
-    from scipy import io, stats
-    from scipy.stats.stats import pearsonr
-    from statistics import mean
-    from extra.MMIDimReduction import MMINet
-    from cluster.selfrepresentation import ElasticNetSubspaceClustering, SparseSubspaceClusteringOMP
-    # from cca_zoo.models import GCCA, KGCCA
-    # from extra.gcca import GCCA
-    import json    
-    import shap
+from astropy.stats import jackknife_resampling, jackknife_stats, binom_conf_interval
+from tqdm import tqdm
+import math
+from itertools import product
+from contextlib import redirect_stdout
+import pandas as pd
+import time
+import scipy
+from scipy import io, stats
+from scipy.stats.stats import pearsonr
+from statistics import mean
+from extra.MMIDimReduction import MMINet
+from cluster.selfrepresentation import ElasticNetSubspaceClustering, SparseSubspaceClusteringOMP
+# from cca_zoo.models import GCCA, KGCCA
+# from extra.gcca import GCCA
+import json    
+import shap
 
-    seed_value= 42
-    import os
-    os.environ['PYTHONHASHSEED']=str(seed_value)
-    import random
-    random.seed(seed_value)
-    np.random.seed(seed_value)
-    import warnings 
-    warnings.filterwarnings("ignore")
+seed_value= 42
+import os
+os.environ['PYTHONHASHSEED']=str(seed_value)
+import random
+random.seed(seed_value)
+np.random.seed(seed_value)
+import warnings 
+warnings.filterwarnings("ignore")
 
 #%%
 def remove_non_features(column_list):
