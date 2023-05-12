@@ -8,7 +8,7 @@ import numpy as np
 from metrics import stat_util
 import pickle
 
-output_path="/home/navid/Dropbox/Repo_2022/Epilep/Epileptogenesis/code/extra/"
+output_path="/home/navid/Dropbox/Repo_2023/Epilep/Epileptogenesis/code/extra/"
 x1,x2,x3,x4,y1,y2,y3,y4 = [],[],[],[],[],[],[],[]
 fold=True
 # x,y,z = [],[],[]
