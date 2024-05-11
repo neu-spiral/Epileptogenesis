@@ -1,13 +1,18 @@
-# Unimodal and Multimodal Classification of Epileptic Seizures
+# Multimodal (and Unimodal) Classification of Post-Traumatic Seizures
 
 ## Project Summary
 Raw Data Samples: 
 
 <img src=https://user-images.githubusercontent.com/38365057/213297916-258904c4-6b5f-4fa4-bb6b-a790cd61447a.png width="400">
 
-Classification Pipeline: 
+Classification Pipeline (raw data -> feature extractor -> fusion+classify -> class probability): 
 
 <img src=https://user-images.githubusercontent.com/38365057/213297928-0540da3e-4a37-460b-aebe-04bc29553773.png width="400">
+
+The overall modeling framework for the multimodal seizure classification task in [1]:
+
+<img src=https://github.com/neu-spiral/Epileptogenesis/assets/38365057/63f744d0-a99c-4ff4-a1d1-ea2b5eda6fa7 width="600">
+
 
 ## Prerequisites
 Please install all necessary library versions by typing in terminal:
@@ -49,19 +54,22 @@ Two execution samples for ```main.py```:
 
 ## Publications
 Please take a look at our papers below for details:
-1. [Multimodal (dMRI, EEG, fMRI: 2022)](https://www.medrxiv.org/content/10.1101/2022.10.22.22281402.abstract)
+
+[1] [Multimodal (dMRI, EEG, fMRI: 2024)](https://www.sciencedirect.com/science/article/pii/S0895611124000636)
 
 Cite: 
 ```
-@article{akbar2022post,
-  title={Post Traumatic Seizure Classification with Missing Data using Multimodal Machine Learning on dMRI, EEG, and fMRI},
-  author={Akbar, Md Navid and Ruf, Sebastian F and Singh, Ashutosh and Faghihpirayesh, Razieh and Garner, Rachael and Bennett, Alexis and Alba, Celina and Imbiriba, Tales and La Rocca, Marianna and Erdogmus, Deniz and others},
-  journal={medRxiv},
-  year={2022}
+@article{akbar2024advancing,
+  title={Advancing post-traumatic seizure classification and biomarker identification: Information decomposition based multimodal fusion and explainable machine learning with missing neuroimaging data},
+  author={Akbar, Md Navid and Ruf, Sebastian F and Singh, Ashutosh and Faghihpirayesh, Razieh and Garner, Rachael and Bennett, Alexis and Alba, Celina and La Rocca, Marianna and Imbiriba, Tales and Erdo{\u{g}}mu{\c{s}}, Deniz and others},
+  journal={Computerized Medical Imaging and Graphics},
+  pages={102386},
+  year={2024},
+  publisher={Elsevier}
 }
 ```
 
-2. [Unimodal (dMRI: 2021)](https://link.springer.com/chapter/10.1007/978-3-030-87615-9_12)
+[2] [Unimodal (dMRI: 2021)](https://link.springer.com/chapter/10.1007/978-3-030-87615-9_12)
 
 Cite: 
 ```
@@ -75,7 +83,7 @@ Cite:
 }
 ```
 
-3. [Unimodal (EEG: 2021)](https://ieeexplore.ieee.org/abstract/document/9630242/)
+[3] [Unimodal (EEG: 2021)](https://ieeexplore.ieee.org/abstract/document/9630242/)
 
 Cite: 
 ```
