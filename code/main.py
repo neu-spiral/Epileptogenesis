@@ -14,7 +14,7 @@ cv_outer=StratifiedKFold(n_splits=outer_splits, shuffle=True, random_state=seed_
 cv_inner=StratifiedKFold(n_splits=inner_splits, shuffle=True, random_state=seed_value)
 score_string="roc_auc"
 # earlier choice was 'f1'
-processed_data_path="../_data/processed"
+processed_data_path="../_data"
 output_path=""
 
 #%% Load data
@@ -57,7 +57,8 @@ if __name__=='__main__':
 # if manifold_flag:
 #     plot_manifold(output_path,model,X_df,y,text,imputer,neighbors,fixed_feat)
 
-# python main.py --model SFS --roc_flag True --rho 0.5 --text _reproduce
+# python main.py --model CCA --roc_flag False --rho 0.5 --text _reproduce
+# python main.py --model CCA --roc_flag False --text check
 
 # python main.py --model NBF --text _adb_fs
 

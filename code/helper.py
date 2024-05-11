@@ -44,8 +44,8 @@ from scipy import io, stats
 from scipy.stats.stats import pearsonr
 from statistics import mean
 from extra.MMIDimReduction import MMINet
-from cluster.selfrepresentation import ElasticNetSubspaceClustering, SparseSubspaceClusteringOMP
-# from cca_zoo.models import GCCA, KGCCA
+# from cluster.selfrepresentation import ElasticNetSubspaceClustering, SparseSubspaceClusteringOMP
+from cca_zoo.models import GCCA, KGCCA
 # from extra.gcca import GCCA
 import json    
 import shap
@@ -192,17 +192,17 @@ def naive_bayes_multimodal(fmri_class,X_fmri,dwi_class,X_dwi,y_test,y_train,eeg_
     return predict,y_prob_true,y_prob_false
 
 def load_data(processed_data_path,NBF=False):
-    fmri_features=pd.read_csv(f"{processed_data_path}/fMRI/fMRI_features_AAL.csv",index_col=0)
+    fmri_features=pd.read_csv(f"{processed_data_path}/fMRI_features_AAL.csv",index_col=0)
 
     # print('fMRI Subject IDs')
     # print(fmri_features["Subject"])
-    dwi_features = pd.read_csv(f"{processed_data_path}/DWI/subs_jan_2022.csv")
+    dwi_features = pd.read_csv(f"{processed_data_path}/subs_jan_2022.csv")
 
     dwi_features["Subject"]=dwi_features["ID"].str[:9]
     dwi_features["Late Seizure Label"]=dwi_features["Label"]
     dwi_features=dwi_features.drop("Label",axis=1)
 
-    eeg_features=pd.read_csv(f"{processed_data_path}/EEG/EEG_features_v0.csv",index_col=0)
+    eeg_features=pd.read_csv(f"{processed_data_path}/EEG_features_v0.csv",index_col=0)
 
     # need to load EEG and DWI features and sort out which subjects to use programatically
 
@@ -320,17 +320,17 @@ def impute_data(imputer,train_df,test_df=None,fmri_key=3,neighbors=1):
     return imputed_train
 
 def load_data_df(processed_data_path,NBF=False):
-    fmri_features=pd.read_csv(f"{processed_data_path}/fMRI/fMRI_features_AAL.csv",index_col=0)
+    fmri_features=pd.read_csv(f"{processed_data_path}/fMRI_features_AAL.csv",index_col=0)
 
     # print('fMRI Subject IDs')
     # print(fmri_features["Subject"])
-    dwi_features = pd.read_csv(f"{processed_data_path}/DWI/subs_jan_2022.csv")
+    dwi_features = pd.read_csv(f"{processed_data_path}/subs_jan_2022.csv")
 
     dwi_features["Subject"]=dwi_features["ID"].str[:9]
     dwi_features["Late Seizure Label"]=dwi_features["Label"]
     dwi_features=dwi_features.drop("Label",axis=1)
 
-    eeg_features=pd.read_csv(f"{processed_data_path}/EEG/EEG_features_v0.csv",index_col=0)
+    eeg_features=pd.read_csv(f"{processed_data_path}/EEG_features_v0.csv",index_col=0)
 
     # need to load EEG and DWI features and sort out which subjects to use programatically
 
